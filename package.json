@@ -19,9 +19,7 @@
     "antifurto365",
     "meian",
     "emoolux",
-    "tcp",
-    "ip",
-    "alarm"
+    "tcp ip alarm"
   ],
   "author": "Luca Mazzilli",
   "license": "MIT"
