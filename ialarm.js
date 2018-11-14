@@ -39,42 +39,30 @@ function iAlarm(host, port, username, password){
       }
 
       function decodeZoneMsg(ZoneMsg, i){
-        let st = "OK";
-        if(ZoneMsg[i-1] & 3){
-            st = i + " zone alarm";
-        }
-        if(ZoneMsg[i-1] & 8){
-            st = i + " zone bypass";
-        }
-        else if(ZoneMsg[i-1] & 16){
-            st = i + " zone fault";
-        }
-        if((ZoneMsg[i-1] & 32)&&((ZoneMsg[i-1] & 8)==0)){
-            st = i + " wireless detector low battery";
-        }
-        if((ZoneMsg[i-1] & 64)&&((ZoneMsg[i-1] & 8)==0)){
-            st = i + " wireless detector loss";
-        }
-        //console.log("Checking msg for zone " + i + ": "+st);
-        return st;
-      }
 
-      function parseZoneMsg(line){
-        let zones = [];
-
-        let start = line.indexOf('(')+1;
-        let end = line.indexOf(')');
-        let ZoneMsg = line.substring(start,end);
-        ZoneMsg = ZoneMsg.split(",");
-        for (let i = 0; i < ZoneMsg.length; i++) {
-          let msg = decodeZoneMsg(ZoneMsg, i);
-          if(msg){
-            //1 based
-            zones.push({id: i+1, message: msg});
-          }
+        let zoneMessage = "unknown";
+        let zoneStatus = ZoneMsg[i];
+        let zoneNumber = i+1
+        if(zoneStatus == "0"){
+          zoneMessage = "OK";
         }
-
-        return zones;
+        if(zoneStatus & 3){
+            zoneMessage = "zone alarm";
+        }
+        if(zoneStatus & 8){
+            zoneMessage = "zone bypass";
+        }
+        else if(zoneStatus & 16){
+            zoneMessage = "zone fault";
+        }
+        if((zoneStatus & 32)&&((zoneStatus & 8)==0)){
+            zoneMessage = "wireless detector low battery";
+        }
+        if((zoneStatus & 64)&&((zoneStatus & 8)==0)){
+            zoneMessage = "wireless detector loss";
+        }
+        //console.log("Checking msg for zone " + zoneNumber + " : "+zoneStatus+"="+zoneMessage);
+        return {id: zoneNumber, status: zoneStatus, message: zoneMessage};
       }
 
       var getOptions = function(_method, _path, _postData){
@@ -243,12 +231,17 @@ function iAlarm(host, port, username, password){
               var start = line.indexOf('(')+1;
               var end = line.indexOf(')');
               var ZoneMsg = line.substring(start,end);
+              //console.log(ZoneMsg);
               ZoneMsg = ZoneMsg.split(",");
+
               for (var i = 0; i < ZoneMsg.length; i++) {
-                var msg = decodeZoneMsg(ZoneMsg, i);
-                if(msg){
+                var zoneData = decodeZoneMsg(ZoneMsg, i);
+                if(zoneData){
+                  if(zoneData.status==1){
+                    data.status = "TRIGGERED";
+                  }
                   //1 based
-                  data.zones.push({id: i+1, message: msg});
+                  data.zones.push(zoneData);
                 }
               }
               break;
@@ -257,6 +250,16 @@ function iAlarm(host, port, username, password){
 
           self.emit(eventName, data);
         })
+      }
+
+      //only zone with relevant event
+      self.filterStatusZones = function(zones){
+        if(!zones){
+          return [];
+        }
+        return zones.filter(function (zone) {
+          return zone.status != 0;
+        });
       }
 
 

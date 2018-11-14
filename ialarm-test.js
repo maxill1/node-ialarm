@@ -1,16 +1,31 @@
 
 const iAlarm = require('./ialarm.js');
 
+var args = {};
+process.argv.slice(2).forEach(function (val, index, array) {
+  if(val.indexOf("=")>-1){
+    var a = val.split("=");
+    args[a[0]] = a[1];
+  }
+});
+
 //TEST
-var host = '192.168.1.81';
-var port = 80;
-var username = "xxxx";
-var password = "xxxx";
+var host = args["host"] || '192.168.1.81';
+var port = args["port"] || 80;
+var username = args["username"];
+var password = args["password"];
+
+if(!username || !password){
+  console.log("Please provide a valid username and password: node ialarm-test username=myuser password=mypassword");
+  return;
+}
+
+console.log("will test iAlarm on "+host+":"+port);
 
 const alarm = new iAlarm(host, port, username, password);
 
 alarm.on('command', function (commandResponse) {
-  console.log("command: "+commandResponse);
+  console.log("command: "+JSON.stringify(commandResponse));
 });
 alarm.on('response', function (response) {
   //console.log("Responded: "+response);
@@ -24,10 +39,18 @@ alarm.on('events', function (events) {
 });
 
 alarm.on('status', function (status) {
-  console.log("status: "+JSON.stringify(status));
+  console.log(new Date().toString() +" status: "+status.status);
+  var relevantEvents = alarm.filterStatusZones(status.zones);
+  if(relevantEvents.length>0){
+      console.log("zone events: "+JSON.stringify(relevantEvents, null, 2));
+  }
 });
 
 //alarm.armStay();
 //alarm.disarm();
-alarm.getEvents();
-alarm.getStatus();
+//alarm.getEvents();
+//alarm.getStatus();
+
+setInterval(function(){
+  alarm.getStatus();
+}, 1000);

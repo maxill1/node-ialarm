@@ -69,6 +69,16 @@ call **host/RemoteCtr.htm** and disarm the alarm, then emit **command** with the
 #### cancel
 call **host/RemoteCtr.htm** and cancel the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
 
+#### filterStatusZones(zones)
+will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatus** 
+```
+alarm.on('status', function (status) {
+  var relevantEvents = alarm.filterStatusZones(status.zones);
+  if(relevantEvents.length>0){
+      console.log("zone events: "+JSON.stringify(relevantEvents, null, 2));
+  }
+});
+```
 
 ## Note:
 some features like zone message are based on iAlarm js reverse enginering, so i haven't tested them.
