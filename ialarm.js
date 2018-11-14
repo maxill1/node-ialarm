@@ -92,7 +92,7 @@ function iAlarm(host, port, username, password){
           options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         }
         if(_postData){
-          options.headers['Content-Length'] = postData.length;
+          options.headers['Content-Length'] = _postData.length;
         }
         return options;
       }
@@ -145,9 +145,9 @@ function iAlarm(host, port, username, password){
         const _acceptedStatusCode = 302;
 
         //preparing http post
-        const req = http.request(getOptions('POST', _path, _postData), function (res) {
+        const req = http.request(getOptions('POST', path, postData), function (res) {
           if(res.statusCode !== _acceptedStatusCode){
-            self.emit('error', _path+ " returned an http status code "+ res.statusCode);
+            self.emit('error', path+ " returned an http status code "+ res.statusCode);
             return;
           }
 
@@ -157,7 +157,7 @@ function iAlarm(host, port, username, password){
           });
           res.on('end', function () {
             self.emit('response', result);
-            getStatus('command');
+            self.getStatus('command');
           });
           res.on('error', function (err) {
             self.emit('error', err);
