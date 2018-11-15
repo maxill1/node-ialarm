@@ -13,8 +13,7 @@ function iAlarm(host, port, username, password){
 
       const alarmStatus = {
           "1":"ARMED_AWAY",
-          "2":"ARMED_HOME",
-          "2":"ARMED_STAY",//same as ARMED_HOME
+          "2":"ARMED_HOME", //ARMED_STAY
           "3":"DISARMED",
           "4":"CANCEL",
           "5":"TRIGGERED"
