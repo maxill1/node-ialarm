@@ -46,9 +46,9 @@ alarm.getStatus();
 #### getStatus
 parses **host/RemoteCtr.htm** then emit **status** with the current status and an array of zone statuses and emit **response** with the full body of the http reponse.
 ```
-{"zones":[{"id":1,"message":"OK"}],"status":"ARMED_STAY"}
+{"zones":[{"id":1,"message":"OK"}],"status":"ARMED_HOME"}
 ```
-- status: ARMED_AWAY,ARMED_STAY,DISARMED,CANCEL,TRIGGERED
+- status: ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
 - zones: id is the zone number on iAlarm and message is one of the following: "zone alarm", "zone bypass", "zone fault", "wireless detector low battery", "wireless detector loss"
 
 #### getEvents

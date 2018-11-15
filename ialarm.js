@@ -13,7 +13,8 @@ function iAlarm(host, port, username, password){
 
       const alarmStatus = {
           "1":"ARMED_AWAY",
-          "2":"ARMED_STAY",
+          "2":"ARMED_HOME",
+          "2":"ARMED_STAY",//same as ARMED_HOME
           "3":"DISARMED",
           "4":"CANCEL",
           "5":"TRIGGERED"
@@ -165,18 +166,17 @@ function iAlarm(host, port, username, password){
       self.armAway = function(){
         sendCommand("ARMED_AWAY");
       }
+      self.armHome = function(){
+        sendCommand("ARMED_HOME");
+      }
       self.armStay = function(){
-        sendCommand("ARMED_STAY");
+        sendCommand("ARMED_HOME");
       }
       self.disarm = function(){
-        sendCommand("CANCEL");
+        sendCommand("DISARMED");
       }
       self.cancel = function(){
-        sendCommand("ARMED_AWAY");
-      }
-      //TODO test
-      self.trigger = function(){
-        sendCommand("TRIGGERED");
+        sendCommand("CANCEL");
       }
 
       self.getEvents = function(){
