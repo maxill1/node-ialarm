@@ -45,12 +45,35 @@ alarm.on('status', function (status) {
       console.log("zone events: "+JSON.stringify(relevantEvents, null, 2));
   }
 });
+alarm.on('zoneInfo', function (zoneInfo) {
+  console.log("zoneInfo: "+JSON.stringify(zoneInfo));
+
+  setTimeout(function(){
+    if(zoneInfo.id){
+      try {
+        var next = parseInt(zoneInfo.id)+1;
+        //max 40
+        if(next == 40){
+          return;
+        }
+        alarm.getZoneInfo(next);
+      } catch (e) {
+      }
+    }
+  },
+  500);
+});
+
+alarm.getZoneInfo('1');
+
 
 //alarm.armStay();
 //alarm.disarm();
 //alarm.getEvents();
 //alarm.getStatus();
 
+/*
 setInterval(function(){
   alarm.getStatus();
 }, 1000);
+*/

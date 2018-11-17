@@ -1,5 +1,5 @@
 
-const http = require('http');
+const http = require('follow-redirects').http;
 const querystring = require('querystring');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
@@ -130,11 +130,10 @@ function iAlarm(host, port, username, password){
           BypassOpt: "0"
         });
         var path = '/RemoteCtr.htm';
-        const _acceptedStatusCode = 302;
 
         //preparing http post
         const req = http.request(getOptions('POST', path, postData), function (res) {
-          if(res.statusCode !== _acceptedStatusCode){
+          if(res.statusCode !== 302 && res.statusCode !== 200){
             self.emit('error', path+ " returned an http status code "+ res.statusCode);
             return;
           }
@@ -160,7 +159,7 @@ function iAlarm(host, port, username, password){
         //sending request with form data
         req.write(postData);
         req.end();
-      }
+      };
 
       self.armAway = function(){
         sendCommand("ARMED_AWAY");
@@ -249,7 +248,76 @@ function iAlarm(host, port, username, password){
 
           self.emit(eventName, data);
         })
-      }
+      };
+
+
+      self.getZoneInfo = function(zoneNumber){
+        //statusRefurbish('ZoneSet','ZnGetPar')
+        //form
+        const postData = querystring.stringify({
+          zoneNo: zoneNumber,
+          ZnGetPar: 'GetPar'
+        });
+        var path = '/Zone.htm';
+
+        //preparing http post
+        var options = getOptions('POST', path, postData);
+
+        const req = http.request(options, function (res) {
+            if(res.statusCode !== 302 && res.statusCode !== 200){
+            self.emit('error', path+ " returned an http status code "+ res.statusCode);
+            return;
+          }
+
+          var result = '';
+          res.on('data', function (chunk) {
+            result += chunk;
+          });
+          res.on('end', function () {
+
+            //parse data
+            //ZoneType 'option[selected=selected]'
+            //ZoneName input value
+
+            var type, name;
+            try {
+              var $ = cheerio.load(result);
+              try {
+                name = $('input[name=ZoneName]').attr('value');
+                if(!name){
+                  console.log($('input[name=ZoneName]').text());
+                }
+              } catch (e) {
+              }
+
+              var child$ = cheerio.load($('select[name=ZoneType]'));
+              type = child$('option[selected=selected]').attr('value');
+            } catch (e) {
+              console.log(e.message);
+            }
+
+            var zoneInfo = {};
+            zoneInfo.id   = zoneNumber;
+            zoneInfo.name = name;
+            zoneInfo.type = type;
+
+            self.emit('zoneInfo', zoneInfo);
+          });
+          res.on('error', function (err) {
+            self.emit('error', err);
+          })
+        });
+
+        //request error
+        req.on('error', function (err) {
+          self.emit('error', err);
+        });
+
+        //sending request with form data
+        req.write(postData);
+        req.end();
+      };
+
 
       //only zone with relevant event
       self.filterStatusZones = function(zones){
