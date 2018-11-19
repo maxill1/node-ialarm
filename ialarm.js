@@ -5,11 +5,19 @@ const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const cheerio = require('cheerio');
 
-function iAlarm(host, port, username, password){
+function iAlarm(host, port, username, password, numberOfZones){
 
   var self = this;
 
   try {
+
+      if(!numberOfZones){
+        //ialarm have 40 zones on ui, providing a custom number will speed up the getZones function
+        numberOfZones = 40;
+      }
+
+      //zone cache
+      var zonesDefinitions;
 
       const alarmStatus = {
           "1":"ARMED_AWAY",
@@ -251,17 +259,19 @@ function iAlarm(host, port, username, password){
       };
 
 
+      //not very reliable, on concurrent post it will fail on retrieving the posted zone
       self.getZoneInfo = function(zoneNumber){
-        //statusRefurbish('ZoneSet','ZnGetPar')
         //form
         const postData = querystring.stringify({
-          zoneNo: zoneNumber,
+          zoneNo: zoneNumber.toString(),
           ZnGetPar: 'GetPar'
         });
         var path = '/Zone.htm';
 
         //preparing http post
         var options = getOptions('POST', path, postData);
+
+        var zones = [];
 
         const req = http.request(options, function (res) {
             if(res.statusCode !== 302 && res.statusCode !== 200){
@@ -279,33 +289,54 @@ function iAlarm(host, port, username, password){
             //ZoneType 'option[selected=selected]'
             //ZoneName input value
 
-            var type, name;
+            var id;
+            var type;
+            var name;
             try {
+              //console.log(JSON.stringify(result));
               var $ = cheerio.load(result);
+
               try {
-                name = $('input[name=ZoneName]').attr('value');
-                if(!name){
-                  console.log($('input[name=ZoneName]').text());
-                }
+                var zoneNo = $('select[name=zoneNo]').html();
+                //console.log(zoneNo);
+                var child$ = cheerio.load(zoneNo);
+                id = child$('option[selected=selected]').text();
               } catch (e) {
               }
 
-              var child$ = cheerio.load($('select[name=ZoneType]'));
-              type = child$('option[selected=selected]').attr('value');
+              try {
+                name = $('input[name=ZoneName]').attr('value');
+              } catch (e) {
+              }
+
+              try {
+                var zoneType = $('select[name=ZoneType]').html();
+                var child$ = cheerio.load(zoneType);
+                type =  child$('option[selected=selected]').text();
+              } catch (e) {
+              }
+
             } catch (e) {
-              console.log(e.message);
+              console.log("Errore getZoneInfo "+e.message);
             }
 
             var zoneInfo = {};
-            zoneInfo.id   = zoneNumber;
+            zoneInfo.id   = id;
             zoneInfo.name = name;
             zoneInfo.type = type;
 
-            self.emit('zoneInfo', zoneInfo);
+            zones[zoneInfo.id] = zoneInfo;
+
+            if(id && zoneNumber == id){
+              self.emit('zoneInfo', zoneInfo);
+            }else{
+              var err = "bad response from server: requested "+zoneNumber +" got " +id + "("+name+")";
+              self.emit('zoneInfoError', { id: zoneNumber, error: err});
+            }
           });
           res.on('error', function (err) {
             self.emit('error', err);
-          })
+          });
         });
 
         //request error
@@ -316,6 +347,66 @@ function iAlarm(host, port, username, password){
         //sending request with form data
         req.write(postData);
         req.end();
+      };
+
+      self.getAllZones = function(forceReload){
+
+        function emitZones(){
+          //console.log("zoneInfo completed.");
+          self.emit('allZones', zonesDefinitions);
+        }
+
+        if(forceReload){
+          zonesDefinitions = undefined;
+        }
+
+        if(zonesDefinitions){
+          emitZones();
+        }else{
+          //populating zones
+
+          var checkZone = function(zoneNumber){
+            if(zoneNumber>numberOfZones){
+              emitZones();
+              return;
+            }
+            self.getZoneInfo(zoneNumber);
+          };
+
+          zonesDefinitions = {};
+          var retry = 0;
+          var errCount = 0;
+          self.on('zoneInfo', function (zoneInfo) {
+            //console.log("zoneInfo: "+JSON.stringify(zoneInfo));
+            var zoneNumber = zoneInfo.id;
+            zonesDefinitions[zoneNumber] = zoneInfo;
+            //got name? try again
+            if(!zoneInfo.name && retry===0){
+              //max 2 retry
+              retry++;
+              checkZone(zoneNumber);
+            }else{
+              retry = 0;
+              //next
+              zoneNumber++;
+              checkZone(zoneNumber);
+            }
+          });
+
+          self.on('zoneInfoError', function (zoneInfoError) {
+            errCount++;
+            if(errCount>10){
+              return;
+            }
+            //ialarm html server may fail on concurrent requests
+            console.log("retring: "+zoneInfoError.id + " - " + zoneInfoError.error);
+            checkZone(zoneInfoError.id);
+          });
+
+
+          checkZone(1);
+
+        }
       };
 
 

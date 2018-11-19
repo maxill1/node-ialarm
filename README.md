@@ -15,6 +15,7 @@ You have to provide 4 arguments:
 - port
 - admin
 - password
+- number of zones (optional, default is 40)
 
 ```
 const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword");
@@ -36,10 +37,15 @@ alarm.on('status', function (status) {
   console.log("status: "+JSON.stringify(status));
 });
 
+alarm.on('allZones', function (allZones) {
+  console.log("allZones: "+JSON.stringify(allZones));
+});
+
 alarm.armStay();
 alarm.disarm();
 alarm.getEvents();
 alarm.getStatus();
+alarm.getAllZones();
 ```
 
 ### functions and emitted events
@@ -56,6 +62,11 @@ parses **host/SystemLog.htm** then emit **events** with the last 24 events recor
 ```
 {"date":"2018-11-11 07:25:04","zone":"70","message":"Sistema Disarmato"}
 ```
+#### getAllZones
+parses **host/Zone.htm** then emit **allZones** with the 40 zones (or configured number of zones) found on the host.
+```
+{ "1" : {"id":"1","name":"Porta","type":"Ritardato"}, "2" : {"id":"2","name":"Cucina","type":"Perimetrale"} }
+```
 
 #### armAway
 call **host/RemoteCtr.htm** and arm in away mode the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
@@ -70,7 +81,7 @@ call **host/RemoteCtr.htm** and disarm the alarm, then emit **command** with the
 call **host/RemoteCtr.htm** and cancel the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
 
 #### filterStatusZones(zones)
-will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatus** 
+will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatus**
 ```
 alarm.on('status', function (status) {
   var relevantEvents = alarm.filterStatusZones(status.zones);
@@ -80,5 +91,6 @@ alarm.on('status', function (status) {
 });
 ```
 
-## Note:
-some features like zone message are based on iAlarm js reverse enginering, so i haven't tested them.
+## Notes:
+1) some features like zone message are based on iAlarm js reverse enginering, so i haven't fully tested them.
+2) getAllZones is pretty slow, cause it post 40 requests. Provide a zone number to boost it a little.

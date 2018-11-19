@@ -14,6 +14,7 @@ var host = args["host"] || '192.168.1.81';
 var port = args["port"] || 80;
 var username = args["username"];
 var password = args["password"];
+var zones = args["zones"];
 
 if(!username || !password){
   console.log("Please provide a valid username and password: node ialarm-test username=myuser password=mypassword");
@@ -22,7 +23,7 @@ if(!username || !password){
 
 console.log("will test iAlarm on "+host+":"+port);
 
-const alarm = new iAlarm(host, port, username, password);
+const alarm = new iAlarm(host, port, username, password, zones);
 
 alarm.on('command', function (commandResponse) {
   console.log("command: "+JSON.stringify(commandResponse));
@@ -45,28 +46,27 @@ alarm.on('status', function (status) {
       console.log("zone events: "+JSON.stringify(relevantEvents, null, 2));
   }
 });
-alarm.on('zoneInfo', function (zoneInfo) {
-  console.log("zoneInfo: "+JSON.stringify(zoneInfo));
 
-  setTimeout(function(){
-    if(zoneInfo.id){
-      try {
-        var next = parseInt(zoneInfo.id)+1;
-        //max 40
-        if(next == 40){
-          return;
-        }
-        alarm.getZoneInfo(next);
-      } catch (e) {
-      }
-    }
-  },
-  500);
+alarm.on('allZones', function (zones) {
+  console.log("allZones: "+JSON.stringify(zones));
 });
 
-alarm.getZoneInfo('1');
+alarm.getAllZones();
 
 
+/*
+var zoneNumber = 1;
+var interval = setInterval(function(){
+  if(zoneNumber>40){
+    clearTimeout(interval);
+    console.log("zoneInfo completed.");
+    return;
+  }
+  alarm.getZoneInfo(zoneNumber);
+}, 200);*/
+
+
+//alarm.getZoneInfo('1');
 //alarm.armStay();
 //alarm.disarm();
 //alarm.getEvents();
