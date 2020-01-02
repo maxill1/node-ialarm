@@ -51,7 +51,10 @@ alarm.on('allZones', function (zones) {
   console.log("allZones: "+JSON.stringify(zones));
 });
 
-alarm.getAllZones();
+setInterval(function(){
+  alarm.getAllZones();
+}, 5000);
+
 
 
 /*
