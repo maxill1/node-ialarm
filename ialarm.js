@@ -137,6 +137,11 @@ function iAlarm(host, port, username, password, numberOfZones){
           BypassNum: "00",
           BypassOpt: "0"
         });
+
+        postRemoteCtr(postData);
+      }
+
+      const postRemoteCtr= function (postData){
         var path = '/RemoteCtr.htm';
 
         //preparing http post
@@ -183,6 +188,28 @@ function iAlarm(host, port, username, password, numberOfZones){
       }
       self.cancel = function(){
         sendCommand("CANCEL");
+      }
+      self.bypassZone = function(number, bypassed){
+        //TODO bypass zone
+        /*
+        else if(part == "BypassSelect")
+        {
+            document.getElementById("Ctrl").value = "0";
+            s = document.getElementById("ZoneSelect");
+            document.getElementById("BypassNum").value =  s.value;
+        }*/
+        
+        var BypassNum =  ("0" + number).slice(-2);
+        var BypassOpt = bypassed?'1':'2';
+
+        //form
+        const postData = querystring.stringify({
+          Ctrl: "0", //not selected
+          BypassNum: BypassNum, //00 not selected, 01 zone 1, etc
+          BypassOpt: BypassOpt //0 not selected, 1 enabled (bypassed), 2 disabled (active)
+        });
+
+        postRemoteCtr(postData);
       }
 
       self.getEvents = function(){

@@ -51,11 +51,17 @@ alarm.on('allZones', function (zones) {
   console.log("allZones: "+JSON.stringify(zones));
 });
 
+//TODO test bypass
+alarm.bypassZone(1, true);
+setTimeout(function(){
+  alarm.bypassZone(1, false);
+}, 15000);
+
+/*
 setInterval(function(){
   alarm.getAllZones();
 }, 5000);
-
-
+*/
 
 /*
 var zoneNumber = 1;
