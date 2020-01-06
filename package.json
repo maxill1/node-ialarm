@@ -1,6 +1,6 @@
 {
   "name": "ialarm",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A node library to control iAlarm (https://www.antifurtocasa365.it/) or other chinese 'TCP IP' alarm system like Meian and Emooluxr",
   "repository": {
     "type": "git",
