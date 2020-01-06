@@ -422,11 +422,6 @@ function iAlarm(host, port, username, password, zoneToQuery){
           //populating zones
 
           var checkZone = function(zoneNumber){
-            //if last
-            if(zoneNumber === zoneToQuery[zoneToQuery.length-1]){
-              emitZones();
-              return;
-            }
             self.getZoneInfo(zoneNumber);
           };
 
@@ -437,6 +432,13 @@ function iAlarm(host, port, username, password, zoneToQuery){
             //console.log("zoneInfo: "+JSON.stringify(zoneInfo));
             var zoneNumber = parseInt(zoneInfo.id);
             zonesDefinitions[zoneNumber] = zoneInfo;
+
+            //if last
+            if(zoneNumber === zoneToQuery[zoneToQuery.length-1]){
+              emitZones();
+              return;
+            }
+
             //got name? try again
             if(!zoneInfo.name && retry===0){
               //max 2 retry
