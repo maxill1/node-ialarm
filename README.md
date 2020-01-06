@@ -55,7 +55,16 @@ parses **host/RemoteCtr.htm** then emit **status** with the current status and a
 {"zones":[{"id":1,"message":"OK"}],"status":"ARMED_HOME"}
 ```
 - status: ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
-- zones: id is the zone number on iAlarm and message is one of the following: "zone alarm", "zone bypass", "zone fault", "wireless detector low battery", "wireless detector loss"
+- zones: 
+  - id is the zone number on iAlarm 
+  - status is the original status code of web panel (0, 3, 8, 16, etc)
+  - ok is status = 0 and grabs from web panel this message: "OK";
+  - alarm is status & 3 and grabs from web panel this message: "zone alarm"
+  - open is status & 16 and grabs from web panel this message: "zone fault"
+  - lowbat is (status & 32)&&((status & 8)==0) and grabs from web panel this message: "wireless detector low battery"  
+  - fault is (status & 64)&&((status & 8)==0) and grabs from web panel this message: "wireless detector loss"  
+  - message is the web panel grabbed message for zone
+
 
 #### getEvents
 parses **host/SystemLog.htm** then emit **events** with the last 24 events recorded in the host and emit **response** with the full body of the http reponse.
