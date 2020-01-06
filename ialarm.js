@@ -46,31 +46,48 @@ function iAlarm(host, port, username, password, numberOfZones){
         throw "unknown status";
       }
 
-      function decodeZoneMsg(ZoneMsg, i){
+      function decodeZoneMsg(ZoneMsg, i, lastChecked){
 
-        let zoneMessage = "unknown";
         let zoneStatus = ZoneMsg[i];
         let zoneNumber = i+1
+
+        var zone = {id: zoneNumber, status: zoneStatus, lastChecked: lastChecked, message : "unknown"};
+
+        zone.ok = false;
+        zone.alarm = false;
+        zone.bypass = false;
+        zone.lowbat = false;
+        zone.fault = false;
+        zone.open = false;     
+
         if(zoneStatus == "0"){
-          zoneMessage = "OK";
+          zone.message = "OK";
+          zone.ok = true;
         }
         if(zoneStatus & 3){
-            zoneMessage = "zone alarm";
+            zone.message = "zone alarm";
+            zone.alarm = true;
         }
         if(zoneStatus & 8){
-            zoneMessage = "zone bypass";
+            zone.message = "zone bypass";
+            zone.bypass = true;
         }
         else if(zoneStatus & 16){
-            zoneMessage = "zone fault";
+            zone.message = "zone fault";
+            zone.open = true; 
+            //just a note (and i'm not sure): every sensor reports zone fault when contact i open (windows, etc,). Water sensors do the opposite, open when no water is detected so it may sound like a false positive.
         }
         if((zoneStatus & 32)&&((zoneStatus & 8)==0)){
-            zoneMessage = "wireless detector low battery";
+            zone.message = "wireless detector low battery";
+            zone.lowbat = true;
         }
         if((zoneStatus & 64)&&((zoneStatus & 8)==0)){
-            zoneMessage = "wireless detector loss";
+            zone.message = "wireless detector loss";
+            zone.fault = true;
         }
+
         //console.log("Checking msg for zone " + zoneNumber + " : "+zoneStatus+"="+zoneMessage);
-        return {id: zoneNumber, status: zoneStatus, message: zoneMessage};
+        return zone;
       }
 
       var getOptions = function(_method, _path, _postData){
@@ -267,8 +284,10 @@ function iAlarm(host, port, username, password, numberOfZones){
               //console.log(ZoneMsg);
               ZoneMsg = ZoneMsg.split(",");
 
+              var lastChecked = new Date();
+
               for (var i = 0; i < ZoneMsg.length; i++) {
-                var zoneData = decodeZoneMsg(ZoneMsg, i);
+                var zoneData = decodeZoneMsg(ZoneMsg, i, lastChecked);
                 if(zoneData){
                   if(zoneData.status==1){
                     data.status = "TRIGGERED";
