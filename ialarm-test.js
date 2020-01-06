@@ -14,7 +14,7 @@ var host = args["host"] || '192.168.1.81';
 var port = args["port"] || 80;
 var username = args["username"];
 var password = args["password"];
-var zones = args["zones"];
+var zones = args["zones"]?JSON.parse(args["zones"]):undefined;
 
 if(!username || !password){
   console.log("Please provide a valid username and password: node ialarm-test username=myuser password=mypassword");
@@ -49,19 +49,21 @@ alarm.on('status', function (status) {
 
 alarm.on('allZones', function (zones) {
   console.log("allZones: "+JSON.stringify(zones));
+  setInterval(function(){
+    alarm.getStatus();
+  }, 5000);
 });
 
 //TODO test bypass
+/*
 alarm.bypassZone(1, true);
 setTimeout(function(){
   alarm.bypassZone(1, false);
-}, 15000);
+}, 15000);*/
 
-/*
-setInterval(function(){
-  alarm.getAllZones();
-}, 5000);
-*/
+
+alarm.getAllZones();
+
 
 /*
 var zoneNumber = 1;
@@ -84,5 +86,4 @@ var interval = setInterval(function(){
 /*
 setInterval(function(){
   alarm.getStatus();
-}, 1000);
-*/
+}, 10000);*/
