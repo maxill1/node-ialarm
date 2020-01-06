@@ -15,10 +15,10 @@ You have to provide 4 arguments:
 - port
 - admin
 - password
-- number of zones (optional, default is 40)
+- number of zones/array of zones id (optional, default is 40, can be a number or an array of number)
 
 ```
-const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword");
+const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15]);
 alarm.on('command', function (commandResponse) {
   console.log("command: "+commandResponse);
 });

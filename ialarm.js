@@ -5,15 +5,19 @@ const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const cheerio = require('cheerio');
 
-function iAlarm(host, port, username, password, numberOfZones){
+function iAlarm(host, port, username, password, zoneToQuery){
 
   var self = this;
 
   try {
 
-      if(!numberOfZones){
+      if(!zoneToQuery || !Array.isArray(zoneToQuery)){
+        var zoneCount = zoneToQuery || 40;
         //ialarm have 40 zones on ui, providing a custom number will speed up the getZones function
-        numberOfZones = 40;
+        zoneToQuery = [];
+        for (let index = 0; index < zoneCount; index++) {
+          zoneToQuery[index] = index+1; //index 0 = zone 1
+        }
       }
 
       //zone cache
@@ -287,6 +291,12 @@ function iAlarm(host, port, username, password, numberOfZones){
               var lastChecked = new Date();
 
               for (var i = 0; i < ZoneMsg.length; i++) {
+
+                //filter zones (index 0 = zone 1)
+                if(!zoneToQuery.includes(i+1)){
+                  continue;
+                }
+
                 var zoneData = decodeZoneMsg(ZoneMsg, i, lastChecked);
                 if(zoneData){
                   if(zoneData.status==1){
@@ -412,7 +422,8 @@ function iAlarm(host, port, username, password, numberOfZones){
           //populating zones
 
           var checkZone = function(zoneNumber){
-            if(zoneNumber>numberOfZones){
+            //if last
+            if(zoneNumber === zoneToQuery[zoneToQuery.length-1]){
               emitZones();
               return;
             }
@@ -424,7 +435,7 @@ function iAlarm(host, port, username, password, numberOfZones){
           var errCount = 0;
           self.on('zoneInfo', function (zoneInfo) {
             //console.log("zoneInfo: "+JSON.stringify(zoneInfo));
-            var zoneNumber = zoneInfo.id;
+            var zoneNumber = parseInt(zoneInfo.id);
             zonesDefinitions[zoneNumber] = zoneInfo;
             //got name? try again
             if(!zoneInfo.name && retry===0){
@@ -434,8 +445,9 @@ function iAlarm(host, port, username, password, numberOfZones){
             }else{
               retry = 0;
               //next
-              zoneNumber++;
-              checkZone(zoneNumber);
+              var index = zoneToQuery.indexOf(parseInt(zoneNumber));
+              index++;
+              checkZone(zoneToQuery[index]);
             }
           });
 
@@ -450,7 +462,7 @@ function iAlarm(host, port, username, password, numberOfZones){
           });
 
 
-          checkZone(1);
+          checkZone(zoneToQuery[0]);
 
         }
       };
