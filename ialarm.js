@@ -299,7 +299,7 @@ function iAlarm(host, port, username, password, zoneToQuery){
 
                 var zoneData = decodeZoneMsg(ZoneMsg, i, lastChecked);
                 if(zoneData){
-                  if(zoneData.status==1){
+                  if(zoneData.alarm){
                     data.status = "TRIGGERED";
                   }
                   //1 based
