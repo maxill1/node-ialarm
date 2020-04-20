@@ -40,17 +40,16 @@ module.exports = function MeianDataTypes () {
 		return self.type('STR', text);
 	};
 
+
+	self.TYP = function(val, typ = []){
+		try {
+			var t = typ[val];
+			return `TYP,${t}|${val}`;
+		} catch (error) {
+			return `TYP,NONE,|${val}` % val;
+		}
+	};
+
 	return self;
 };
 
-/*
-
-
-
-self.TYP = function(val, typ = []){
-try:
-    return 'TYP,%s|%d' % (typ[val], val)
-except IndexError:
-    return 'TYP,NONE,|%d' % val
-}
-    */

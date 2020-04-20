@@ -1,9 +1,9 @@
 
-const iAlarm = require('./ialarm-client');
+const meianClient = require('../ialarm-tcp');
 
 var args = {};
-process.argv.slice(2).forEach(function (val, index, array) {
-	if(val.indexOf('=')>-1){
+process.argv.slice(2).forEach(function (val) {
+	if (val.indexOf('=') > -1) {
 		var a = val.split('=');
 		args[a[0]] = a[1];
 	}
@@ -14,33 +14,37 @@ var host = args['host'] || '192.168.1.81';
 var port = args['port'] || 18034;
 var username = args['username'];
 var password = args['password'];
-var zones = args['zones']?JSON.parse(args['zones']):undefined;
+//var zones = args['zones']?JSON.parse(args['zones']):undefined;
 
-if(!username || !password){
+if (!username || !password) {
 	console.log('Please provide a valid username and password: node ialarm-test username=myuser password=mypassword');
 	return;
 }
 
-console.log('will test iAlarm on '+host+':'+port);
+console.log('will test meianClient on ' + host + ':' + port);
 
-const alarm = new iAlarm(host, port, username, password);
+const alarm = new meianClient(host, port, username, password);
 alarm.on('response', function (response) {
-	console.log('Responded: '+JSON.stringify(response));
+	console.log('Responded: ' + JSON.stringify(response));
 });
 alarm.on('error', function (err) {
-	console.log('error: '+JSON.stringify(err));
+	console.log('error: ' + JSON.stringify(err));
 });
 alarm.on('connected', function (response) {
-	console.log('Conencted: '+JSON.stringify(response));
+	console.log('Connected: ' + JSON.stringify(response));
+	//alarm.getPhone();
+	//alarm.getByWay();
+	//alarm.setByWay(1, true);
 	alarm.getAlarmStatus();
+	//alarm.setAlarmStatus(1);
 });
 alarm.on('disconnected', function (response) {
-	console.log('Disconnected: '+JSON.stringify(response));
+	console.log('Disconnected: ' + JSON.stringify(response));
 });
 
 alarm.connect();
 
-setTimeout(function(){
+setTimeout(function () {
 	alarm.disconnect();
 
 }, 40000);

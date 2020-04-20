@@ -8,6 +8,7 @@ inspired by python version https://github.com/RyuzakiKK/pyialarm
 npm install node-ialarm
 ```
 
+# scraper version
 ## iAlarm functions
 ### constructor
 You have to provide 4 arguments:
@@ -18,6 +19,7 @@ You have to provide 4 arguments:
 - number of zones/array of zones id (optional, default is 40, can be a number or an array of number)
 
 ```
+const iAlarm = require('ialarm-scraper'); 
 const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15]);
 alarm.on('command', function (commandResponse) {
   console.log("command: "+commandResponse);
@@ -103,3 +105,6 @@ alarm.on('status', function (status) {
 ## Notes:
 1) some features like zone message are based on iAlarm js reverse enginering, so i haven't fully tested them.
 2) getAllZones is pretty slow, cause it post 40 requests. Provide a zone number to boost it a little.
+
+# TCP version
+WIP
