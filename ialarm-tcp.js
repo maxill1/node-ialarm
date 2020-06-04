@@ -90,12 +90,12 @@ function MeianClient(host, port, uid, pwd) {
 		if (xml.indexOf('<Err>ERR') === 0) {
 			const error = xml.substring(0, xml.indexOf('</Err>') + 6);
 			xml = xml.replace(error, '');
-			Err = convert.xml2js(error, { compact: true });
+			Err = convert.xml2js(error, { compact: true, textKey: 'value' });
 		}
-		const data = convert.xml2js(xml, { compact: true });
+		const data = convert.xml2js(xml, { compact: true, textKey: 'value' });
 		//apply <Err>ERR|00</Err> at root
 		if (Err) {
-			data.Err = Err.Err._text;
+			data.Err = Err.Err.value;
 		}
 		console.log('Received data: ', data);
 		//TODO check errors
@@ -169,10 +169,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/SetAlarmStatus', cmd);
 	};
 
-	this.getByWay = function () {
+	this.getByWay = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		//request
@@ -211,10 +211,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetEmail', cmd);
 	};
 
-	this.getEvents = function () {
+	this.getEvents = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		//request
@@ -231,10 +231,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetGprs', cmd);
 	};
 
-	this.getLog = function () {
+	this.getLog = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		//request
@@ -259,7 +259,7 @@ function MeianClient(host, port, uid, pwd) {
 	this.getOverlapZone = function () {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32();
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		//request
@@ -287,10 +287,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetPhone', cmd, true);
 	};
 
-	this.getRemote = function () {
+	this.getRemote = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetRemote', cmd, true);
@@ -325,10 +325,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetSendby', cmd);
 	};
 
-	this.getSensor = function () {
+	this.getSensor = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetSensor', cmd, true);
@@ -346,19 +346,19 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetServ', cmd);
 	};
 
-	this.getSwitch = function () {
+	this.getSwitch = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetSwitch', cmd, true);
 	};
 
-	this.getSwitchInfo = function () {
+	this.getSwitchInfo = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetSwitchInfo', cmd, true);
@@ -414,19 +414,19 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/GetVoiceType', cmd, true);
 	};
 
-	this.getZone = function () {
+	this.getZone = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetZone', cmd, true);
 	};
 
-	this.getZoneType = function () {
+	this.getZoneType = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetZoneType', cmd, true);
@@ -477,10 +477,10 @@ function MeianClient(host, port, uid, pwd) {
 		self._send('/Root/Host/WlsSave', cmd);
 	};
 
-	this.getWlsList = function () {
+	this.getWlsList = function (offset) {
 		var cmd = {};
 		cmd['Total'] = null;
-		cmd['Offset'] = types.S32(0);
+		cmd['Offset'] = types.S32(offset || 0);
 		cmd['Ln'] = null;
 		cmd['Err'] = null;
 		self._send('/Root/Host/GetWlsList', cmd);
@@ -737,8 +737,8 @@ function MeianClient(host, port, uid, pwd) {
 		self.setAlarmStatus(value);
 	};
 	self.bypassZone = function (number, bypassed) {
-		//TODO
 		console.log("bypass " + number + "=" + bypassed)
+		self.setByWay(number, bypassed);
 	}
 	//only zone with relevant event
 	self.filterStatusZones = function (zones) {

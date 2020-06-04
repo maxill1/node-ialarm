@@ -69,5 +69,40 @@ module.exports = {
 		28: 'GMT+11:00',
 		29: 'GMT+12:00',
 		30: 'GMT+13:00',
+	},
+
+	zoneStatus: {
+		1: {
+			bypass: false,
+			open: false,
+			fault: false,
+			alarm: false,
+			lowbat: false,
+			message: 'OK'
+		},
+		5: {
+			bypass: true,
+			open: false,
+			fault: false,
+			alarm: false,
+			lowbat: false,
+			message: 'Bypassed'
+		},
+		9: {
+			bypass: false,
+			open: false,
+			fault: true,
+			alarm: false,
+			lowbat: false,
+			message: 'Fault'
+		},
+		13: {
+			bypass: true,
+			open: false,
+			fault: true,
+			alarm: false,
+			lowbat: false,
+			message: 'Bypassed and fault'
+		},
 	}
 }; 

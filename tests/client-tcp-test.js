@@ -33,10 +33,18 @@ alarm.on('error', function (err) {
 alarm.on('connected', function (response) {
 	console.log('Connected: ' + JSON.stringify(response));
 	//alarm.getPhone();
+	//alarm.getWlsStatus(15);
 	//alarm.getByWay();
 	//alarm.setByWay(1, true);
-	alarm.getAlarmStatus();
+	//alarm.getAlarmStatus();
 	//alarm.setAlarmStatus(1);
+	alarm.getZone();
+	//alarm.getEvents();
+	//alarm.getLog();
+	//alarm.getSensor();
+	//alarm.getZoneType();
+	//alarm.getDefense();
+
 });
 alarm.on('disconnected', function (response) {
 	console.log('Disconnected: ' + JSON.stringify(response));
