@@ -33,6 +33,28 @@ module.exports = function () {
         return null;
     }
 
+
+    /**
+     * When multiple messages are neede to get a full list, this function will handle the parsing and push
+     */
+    const _parseListableData = function (listName, current, container, lineParser) {
+        //creating raw array and formatted list
+        if (!container.raw) {
+            container.raw = []
+        }
+        container.raw.push(current);
+
+        if (!container[listName]) {
+            container[listName] = []
+        }
+
+        for (const key in current) {
+            const element = current[key];
+            //extract L0, L1, etc and add them to the list in the container
+            _listBasedFormatter(key, element, container, listName, lineParser, true);
+        }
+    }
+
     /**
      * parses a line based response
      * @param {*} key current iterated key
@@ -40,11 +62,21 @@ module.exports = function () {
      * @param {*} data the response object
      * @param {*} listName the name of the list containing lines (events, logs, etc)
      */
-    const _listBasedFormatter = function (key, value, data, listName, rowFormatter) {
+    const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push) {
         var lineNumber = _getLineNumber(key);
         if (lineNumber !== null && rowFormatter) {
-            data[listName][lineNumber] = rowFormatter(value, key, lineNumber);
+            const row = rowFormatter(value, key, lineNumber);
+            if (!data[listName]) {
+                data[listName] = [];
+            }
+            if (push) {
+                data[listName].push(row);
+            } else {
+                data[listName][lineNumber] = row;
+            }
+
         }
+
     }
 
     /** 
@@ -161,26 +193,55 @@ module.exports = function () {
         return response;
     }
 
-
-    this.GetZone = function (data) {
+    /**
+     * Get zone info
+     */
+    this.GetZone = function (current, container) {
         console.log("Formatting GetZone response");
-        var response = {
-            zones: [],
-            raw: data
-        };
-        for (const key in data) {
-            const element = data[key];
-            _listBasedFormatter(key, element, response, 'zones', function (lineValue) {
-                var line = {};
-                line.Name = this.cleanData(lineValue.Name.value);
-                line.Type = this.cleanData(lineValue.Type.value);
-                line.Voice = this.cleanData(lineValue.Voice.value);
-                return line;
-            });
-        }
-        return response;
+
+        _parseListableData('zones', current, container, function (lineValue) {
+            var line = {};
+            line.Name = this.cleanData(lineValue.Name.value);
+            line.Type = this.cleanData(lineValue.Type.value);
+            line.Voice = this.cleanData(lineValue.Voice.value);
+            return line;
+        });
+
+        return container;
     }
 
+    /**
+     * List of events recorded in the alarm (arm, disarm, bypass, alert, etc)
+     */
+    this.GetLog = function (current, container) {
+        console.log("Formatting GetLog response");
+        /*
+        raw format
+        "L1": { "Time": { "value": "DTA,19|2020.06.04.18.35.15" }, 
+                "Area": { "value": "S32,1,40|16" }, 
+                 "Event": { "value": "STR,4|1133" } }
+        */
+        /*
+        scraper format
+        date:"2020-11-25 21:28:09"
+        message:"Zona Bypass"
+        zone:"1"*/
+        _parseListableData('logs', current, container, function (lineValue) {
+            var line = {};
+            line.date = this.cleanData(lineValue.Time.value);
+            line.zone = this.cleanData(lineValue.Area.value);
+            var event = this.cleanData(lineValue.Event.value);
+            line.message = constants.cid[event] || event;
+            return line;
+        });
+
+        return container;
+    }
+
+
+    /*
+     * Not sure about what this means. They seem to be some CID decoded string
+     */
     this.GetEvents = function (data) {
         console.log("Formatting GetEvents response");
         var response = {
@@ -195,29 +256,6 @@ module.exports = function () {
                     return constants.cid[lineValue];
                 });
             }
-        }
-        return response;
-    }
-
-    this.GetLog = function (data) {
-        console.log("Formatting GetLog response");
-        //"L1": { "Time": { "value": "DTA,19|2020.06.04.18.35.15" }, 
-        //        "Area": { "value": "S32,1,40|16" }, 
-        //         "Event": { "value": "STR,4|1133" } }
-        var response = {
-            logs: [],
-            raw: data
-        };
-        for (const key in data) {
-            const element = data[key];
-            _listBasedFormatter(key, element, response, 'logs', function (lineValue) {
-                var line = {};
-                line.Time = this.cleanData(lineValue.Time.value);
-                line.Area = this.cleanData(lineValue.Area.value);
-                var event = this.cleanData(lineValue.Event.value);
-                line.Event = constants.cid[event] || event;
-                return line;
-            });
         }
         return response;
     }
