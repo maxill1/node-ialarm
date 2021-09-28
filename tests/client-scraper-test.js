@@ -67,7 +67,8 @@ setTimeout(function(){
 
 
 //alarm.getAllZones();
-alarm.getStatus();
+//alarm.getStatus()
+alarm.getStatus()
 
 
 /*
@@ -85,7 +86,7 @@ var interval = setInterval(function(){
 //alarm.getZoneInfo('1');
 //alarm.armStay();
 //alarm.disarm();
-//alarm.getEvents();
+alarm.getEvents();
 //alarm.getStatus();
 
 /*
