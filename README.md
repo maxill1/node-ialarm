@@ -10,15 +10,16 @@ npm install node-ialarm
 
 ## iAlarm functions
 ### constructor
-You have to provide 4 arguments:
+You have to provide 5 arguments:
 - host
 - port
 - admin
 - password
 - number of zones/array of zones id (optional, default is 40, can be a number or an array of number)
+- alternative scraper page names (['/RemoteCtr.htm', '/Zone.htm', '/SystemLog.htm'] is default, some alarms may have different page names )
 
 ```
-const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15]);
+const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15], ['/RemoteCtr.htm', '/Zone.htm', '/SystemLog.htm']);
 alarm.on('command', function (commandResponse) {
   console.log("command: "+commandResponse);
 });
