@@ -1,9 +1,13 @@
 
-var testdata = require('./testdata');
-var formatters = require('../src/tcp-response-formatters')();
+//var testdata = require('./testdata');
+//var formatters = require('../src/tcp-response-formatters')();
 //MeianClient()._send(testdata.INIT.json);
 //MeianClient()._receive(testdata.INIT.raw);
 //formatters.GetByWay(testdata.GetByWay.Root.Host.GetByWay);
+
+//2,3,6,16 = zone fault (16 su web)
+//var ZoneMsg = new Array(0,16,16,0,0,16,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,0);
+//console.log(formatters.GetByWay({ "Total": { "value": "S32,0,40|40" }, "Offset": { "value": "S32,0,40|0" }, "Ln": { "value": "S32,0,40|16" }, "L0": { "value": "S32,1,255|1" }, "L1": { "value": "S32,1,255|9" }, "L2": { "value": "S32,1,255|9" }, "L3": { "value": "S32,1,255|1" }, "L4": { "value": "S32,1,255|1" }, "L5": { "value": "S32,1,255|9" }, "L6": { "value": "S32,1,255|1" }, "L7": { "value": "S32,1,255|1" }, "L8": { "value": "S32,1,255|1" }, "L9": { "value": "S32,1,255|1" }, "L10": { "value": "S32,1,255|1" }, "L11": { "value": "S32,1,255|1" }, "L12": { "value": "S32,1,255|1" }, "L13": { "value": "S32,1,255|1" }, "L14": { "value": "S32,1,255|1" }, "L15": { "value": "S32,1,255|9" }, "Err": {} }));
 //formatters.GetEvents(testdata.GetEvents.Root.Host.GetEvents);
 //formatters.GetLog(testdata.GetLog.Root.Host.GetLog);
 //formatters.GetZone(testdata.GetZone.Root.Host.GetZone);
@@ -133,12 +137,10 @@ alarm.on('status', function (status) {
         console.log("zone events: " + JSON.stringify(relevantEvents, null, 2));
     }
 });
-
+1
 alarm.on('allZones', function (zones) {
     console.log("allZones: " + JSON.stringify(zones));
-    setInterval(function () {
-        alarm.getStatus();
-    }, 5000);
+    alarm.getStatus();
 });
 
 alarm.on('zoneInfo', function (zone) {
@@ -154,6 +156,10 @@ alarm.on('disconnected', function (response) {
 });
 
 alarm.connect();
+
+setTimeout(function () {
+    alarm.getStatus();
+}, 15000);
 
 setTimeout(function () {
     alarm.disconnect();

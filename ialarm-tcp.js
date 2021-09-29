@@ -9,7 +9,13 @@ const alarmStatus = require('./src/status-decoder')();
 const tcpResponseFormatters = require('./src/tcp-response-formatters')();
 const constants = require('./src/constants');
 
+var zoneCache = [];
+
 function MeianClient(host, port, uid, pwd) {
+
+    //default
+    port = port || 18034;
+
     var self = this;
     //sequence for TCP requests
     self.seq = 0;
@@ -109,7 +115,9 @@ function MeianClient(host, port, uid, pwd) {
             self.emit('error', data.Err);
         } else {
             //custom event based on query
-            var event = constants.events[self._getCmdName(data)] || constants.events.default;
+            var event = constants.events[self._getCmdName(data)] //custom command
+                || self._getCmdName(data)  //host command (GetZone, GetByWay)
+                || constants.events.default // response;
             if (self.status === 'autenticating') {
                 event = 'connected';
                 self.status = event;
@@ -232,8 +240,7 @@ function MeianClient(host, port, uid, pwd) {
     };
 
     /**
-     * get bypass status for sensor
-     * TODO not working, may be a list
+     * get sensor status (alarm/open/closed, problem, lowbat, bypass, etc)
      */
     this.getByWay = function () {
         var cmd = {};
@@ -869,52 +876,141 @@ function MeianClient(host, port, uid, pwd) {
         self._send('/Root/Host/SetZone', cmd);
     };
 
-    //scraper impl compatibility
-    self.getStatus = function (eventName) {
-        self.getAlarmStatus();
+    //scraper impl compatibility methods
+
+    /**
+     * Full status: armed/disarmed/triggered and all sensors data with names
+     * @param {*} forceZoneInfo 
+     */
+    self.getStatus = function (forceZoneInfo) {
+
+        var alarmStatus = {
+            status: '',
+            zones: []
+        };
+
+        if (forceZoneInfo || !zoneCache || zoneCache.length === 0) {
+            console.info("Missing zone info (name, type, voice, etc), fetching with GetZone");
+            //get zone definitions
+            self.getZone()
+            self.on('GetZone', function (data) {
+                zoneCache = data && data.zones || [];
+                //armed/disarmed
+                self.getAlarmStatus()
+            })
+        } else {
+            //armed/disarmed
+            self.getAlarmStatus()
+        }
+
+        //get specific zone
+        self.on('GetAlarmStatus', function (status) {
+            alarmStatus.status = status;
+            self.getByWay();
+        })
+
+        self.on('GetByWay', function (data) {
+            alarmStatus.zones = []
+            if (data && data.zones) {
+                for (let index = 0; index < data.zones.length; index++) {
+                    const zone = data.zones[index];
+                    const info = zoneCache.find(z => z.id === zone.id);
+                    //merge
+                    alarmStatus.zones[index] = {
+                        ...zone,
+                        ...info
+                    }
+                }
+                self.emit('status', alarmStatus);
+            }
+        })
     }
 
+    /**
+     * Arm Away
+     */
     self.armAway = function () {
         const value = alarmStatus.fromStatusToTcpValue('ARMED_AWAY');
         self.setAlarmStatus(value);
     };
+
+    /**
+     * Arm home
+     */
     self.armHome = function () {
         const value = alarmStatus.fromStatusToTcpValue('ARMED_HOME');
         self.setAlarmStatus(value);
     };
+
+    /**
+     * Arm home alias
+     */
     self.armStay = function () {
         const value = alarmStatus.fromStatusToTcpValue('ARMED_HOME');
         self.setAlarmStatus(value);
     };
+
+    /**
+     * Disarm
+     */
     self.disarm = function () {
         const value = alarmStatus.fromStatusToTcpValue('DISARMED');
         self.setAlarmStatus(value);
     };
+
+    /**
+     * Cancel triggered status
+     */
     self.cancel = function () {
         const value = alarmStatus.fromStatusToTcpValue('CANCEL');
         self.setAlarmStatus(value);
     };
+
+    /**
+     * Bypass/reset bypass zone
+     * @param {*} number 
+     * @param {*} bypassed 
+     */
     self.bypassZone = function (number, bypassed) {
         console.log("bypass " + number + "=" + bypassed)
         self.setByWay(number, bypassed);
     }
-    //only zone with relevant event
+
+    /**
+     * filter zones with relevant status 
+     * @param {*} zones 
+     * @returns 
+     */
     self.filterStatusZones = function (zones) {
         if (!zones) {
             return [];
         }
         return zones.filter(function (zone) {
-            return zone.status != 0;
+            return zone.status > 1;
         });
     };
-    self.getAllZones = function (forceReload) {
+
+    /**
+     * Get all zones definition
+     */
+    self.getAllZones = function () {
         self.getZone()
+        self.on('GetZone', function (data) {
+            zoneCache = data && data.zones || []
+            self.emit('allZones', zoneCache);
+        })
     };
+
+    /**
+     * single zone info
+     * @param {*} zoneNumber 
+     */
     self.getZoneInfo = function (zoneNumber) {
         self.getZone()
         //get specific zone
-        self.on('allZones', function (zones) {
-            if (zones && zones.length > 0) {
+        self.on('GetZone', function (data) {
+            const zones = data && data.zones || [];
+            if (zones.length > 0) {
                 const info = zones.find(z => z.id === zoneNumber);
                 if (info) {
                     self.emit('zoneInfo', info);

@@ -187,6 +187,8 @@ module.exports = function () {
         const ZONE_ALARM = (1 << 1)
         const ZONE_BYPASS = (1 << 2)
         const ZONE_FAULT = (1 << 3)
+        const ZONE_LOW_BATTERY = (1 << 4)
+        const ZONE_LOSS = (1 << 5)
 
         for (const key in data) {
             const element = data[key];
@@ -198,63 +200,54 @@ module.exports = function () {
                     zone.name = key;
                     zone.status = lineValue;
 
-                    zone.ok = false;
+                    zone.inUse = false;
+                    zone.ok = true;
                     zone.alarm = false;
                     zone.bypass = false;
                     zone.lowbat = false;
                     zone.fault = false;
                     zone.open = false;
-
-                    //fault, alarm, bypass, etc
-                    var statusData = constants.zoneStatus[lineValue];
-                    if (statusData) {
-                        for (const key in statusData) {
-                            zone[key] = statusData[key];
-                        }
-                    }
+                    zone.wirelessLoss = false;
 
                     const zoneStatus = zone.status;
 
                     if (zoneStatus & ZONE_NOT_USED) {
-                        console.log(`${zone.id}=ZONE_NOT_USED`);
-                    }
-                    if (zoneStatus & ZONE_ALARM) {
-                        console.log(`${zone.id}=ZONE_ALARM`);
+                        //console.log(`${zone.id}=ZONE_NOT_USED`);
+                        zone.inUse = false;
                     }
                     if (zoneStatus & ZONE_IN_USE) {
-                        console.log(`${zone.id}=ZONE_IN_USE`);
+                        //console.log(`${zone.id}=ZONE_IN_USE`);
+                        zone.inUse = true;
                     }
-                    if (zoneStatus & ZONE_BYPASS) {
-                        console.log(`${zone.id}=ZONE_BYPASS`);
-                    }
-                    if (zoneStatus & ZONE_FAULT) {
-                        console.log(`${zone.id}=ZONE_FAULT`);
-                    }
-
-                    if (zoneStatus == '0') {
-                        zone.message = 'OK';
-                        zone.ok = true;
-                    }
-                    if (zoneStatus & 3) {
-                        zone.message = 'zone alarm';
+                    if (zoneStatus & ZONE_ALARM) {
+                        //console.log(`${zone.id}=ZONE_ALARM`);
                         zone.alarm = true;
                     }
-                    if (zoneStatus & 8) {
-                        zone.message = 'zone bypass';
+                    if (zoneStatus & ZONE_BYPASS) {
+                        //console.log(`${zone.id}=ZONE_BYPASS`);
                         zone.bypass = true;
                     }
-                    else if (zoneStatus & 16) {
-                        zone.message = 'zone fault';
-                        zone.open = true;
-                        //just a note (and i'm not sure): every sensor reports zone fault when contact i open (windows, etc,). Water sensors do the opposite, open when no water is detected so it may sound like a false positive.
+                    if (zoneStatus & ZONE_FAULT) {
+                        //console.log(`${zone.id}=ZONE_FAULT`);
+                        zone.fault = true;
                     }
-                    if ((zoneStatus & 32) && ((zoneStatus & 8) == 0)) {
-                        zone.message = 'wireless detector low battery';
+                    if (zoneStatus & ZONE_LOW_BATTERY) {
+                        //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
                         zone.lowbat = true;
                     }
-                    if ((zoneStatus & 64) && ((zoneStatus & 8) == 0)) {
-                        zone.message = 'wireless detector loss';
-                        zone.fault = true;
+                    if (zoneStatus & ZONE_LOSS) {
+                        //console.log(`${zone.id}=ZONE_LOSS`);
+                        zone.wirelessLoss = true;
+                    }
+
+                    zone.ok = !zone.alarm
+                        && !zone.alarm
+                        && !zone.fault
+                        && !zone.lowbat
+                        && !zone.loss;
+
+                    if (zone.ok) {
+                        zone.message = 'OK';
                     }
 
                     return zone;

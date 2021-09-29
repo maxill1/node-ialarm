@@ -6,8 +6,9 @@ module.exports = {
      */
     events: {
         default: 'response',
-        GetZone: 'allZones',
-        GetAlarmStatus: 'status',
+        // GetZone: 'allZones',
+        // GetZone: 'GetZone',
+        // GetAlarmStatus: 'GetAlarmStatus',
         //TODO status, events, command zoneInfo zoneInfoError
     },
 
