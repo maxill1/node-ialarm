@@ -908,10 +908,21 @@ function MeianClient(host, port, uid, pwd) {
         });
     };
     self.getAllZones = function (forceReload) {
-        self.getZone('allZones')
+        self.getZone()
     };
     self.getZoneInfo = function (zoneNumber) {
-        //TODO
+        self.getZone()
+        //get specific zone
+        self.on('allZones', function (zones) {
+            if (zones && zones.length > 0) {
+                const info = zones.find(z => z.id === zoneNumber);
+                if (info) {
+                    self.emit('zoneInfo', info);
+                } else {
+                    self.emit('zoneInfoError', { id: zoneNumber, error: 'not found' });
+                }
+            }
+        })
     }
 
     return self;

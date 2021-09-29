@@ -56,14 +56,70 @@ alarm.on('connected', function (response) {
     //alarm.getSensor();
     //alarm.getByWay();
     //alarm.setByWay(1, true);
-    //alarm.getAlarmStatus();
-    //alarm.setAlarmStatus(1);
-    alarm.getZone();
+    //alarm.getZone();
     //alarm.getEvents();
     //alarm.getLog();
     //alarm.getSensor();
     //alarm.getZoneType();
     //alarm.getDefense();
+
+    // alarm.setAlarmStatus(0);
+    // alarm.setAlarmStatus(1);
+    // alarm.getAlarmStatus();
+    // alarm.wlsStudy();
+    // alarm.configWlWaring();
+    // alarm.fskStudy(true);
+    // alarm.getWlsStatus(0);
+    // alarm.getWlsList();
+    // alarm.swScan();
+    // alarm.getSwitch();
+    // alarm.setSwitchInfo(0, 'Switch0', '01:23', '12:34');
+    // alarm.getSwitchInfo();
+    // alarm.opSwitch(0, false);
+    // alarm.getByWay();
+    // alarm.getDefense();
+    // alarm.getEmail();
+    // alarm.getEvents();
+    // alarm.getGprs(1100);
+    // alarm.getLog();
+    // alarm.getNet();
+    // alarm.getOverlapZone();
+    // alarm.getPairServ();
+    // alarm.getPhone();
+    // alarm.getRemote();
+    // alarm.getRfid();
+    // alarm.getRfidType();
+    // alarm.getSendby(1100);
+    // alarm.getSensor();
+    // alarm.getServ();
+    // alarm.getSwitch();
+    // alarm.getSwitchInfo();
+    // alarm.getSys();
+    // alarm.getTel();
+    // alarm.getTime();
+    // alarm.getVoiceType();
+    // alarm.getZone();
+    // alarm.getZoneType();
+    // alarm.getAlarmStatus();
+    // alarm.setAlarmStatus(0);
+    // alarm.opSwitch(0, false);
+    // alarm.opSwitch(0, true);
+    // alarm.opSwitch(1, false);
+    // alarm.opSwitch(1, true);
+    // alarm.reset(0);
+
+    //library specific events (scraper impl compatibility)
+    alarm.getStatus();
+    // alarm.armAway();
+    // alarm.armHome();
+    // alarm.armStay();
+    // alarm.disarm();
+    // alarm.cancel();
+    // alarm.bypassZone(1, true);
+    // alarm.bypassZone(1, false);
+    // alarm.filterStatusZones([2, 6, 8, 16]);
+    // alarm.getAllZones();
+    // alarm.getZoneInfo(1)
 });
 
 alarm.on('events', function (events) {
