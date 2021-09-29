@@ -64,8 +64,35 @@ alarm.on('connected', function (response) {
     //alarm.getSensor();
     //alarm.getZoneType();
     //alarm.getDefense();
-
 });
+
+alarm.on('events', function (events) {
+    console.log("events: " + JSON.stringify(events));
+});
+
+alarm.on('status', function (status) {
+    console.log(new Date().toString() + " status: " + status.status);
+    var relevantEvents = alarm.filterStatusZones(status.zones);
+    if (relevantEvents.length > 0) {
+        console.log("zone events: " + JSON.stringify(relevantEvents, null, 2));
+    }
+});
+
+alarm.on('allZones', function (zones) {
+    console.log("allZones: " + JSON.stringify(zones));
+    setInterval(function () {
+        alarm.getStatus();
+    }, 5000);
+});
+
+alarm.on('zoneInfo', function (zone) {
+    console.log("zoneInfo: " + JSON.stringify(zone));
+});
+
+alarm.on('zoneInfoError', function (error) {
+    console.log("zoneInfoError: " + JSON.stringify(error));
+});
+
 alarm.on('disconnected', function (response) {
     console.log('Disconnected: ' + JSON.stringify(response));
 });
@@ -74,5 +101,4 @@ alarm.connect();
 
 setTimeout(function () {
     alarm.disconnect();
-
 }, 40000);

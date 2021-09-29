@@ -48,11 +48,20 @@ module.exports = function () {
             container[listName] = []
         }
 
-        for (const key in current) {
-            const element = current[key];
+        const linesTotal = this.cleanData(current.Ln.value);
+        const offset = this.cleanData(current.Offset.value);
+
+        for (let queryIndex = 0; queryIndex < linesTotal; queryIndex++) {
+            //L0, L1, L2
+            const lineKey = 'L' + queryIndex;
+            const element = current[lineKey];
+            const elementIndex = offset + queryIndex;
+            //index build using offset and L0,L1,L2
+            element.index = elementIndex;
             //extract L0, L1, etc and add them to the list in the container
-            _listBasedFormatter(key, element, container, listName, lineParser, true);
+            _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset);
         }
+
     }
 
     /**
@@ -62,10 +71,12 @@ module.exports = function () {
      * @param {*} data the response object
      * @param {*} listName the name of the list containing lines (events, logs, etc)
      */
-    const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push) {
+    const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push, linesTotal, offset) {
+
+        //L0, L1, etc
         var lineNumber = _getLineNumber(key);
         if (lineNumber !== null && rowFormatter) {
-            const row = rowFormatter(value, key, lineNumber);
+            const row = rowFormatter(value, key, lineNumber, linesTotal, offset);
             if (!data[listName]) {
                 data[listName] = [];
             }
@@ -259,11 +270,16 @@ module.exports = function () {
     this.GetZone = function (current, container) {
         console.log("Formatting GetZone response");
 
-        _parseListableData('zones', current, container, function (lineValue) {
+        _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
             var line = {};
-            line.Name = this.cleanData(lineValue.Name.value);
-            line.Type = this.cleanData(lineValue.Type.value);
-            line.Voice = this.cleanData(lineValue.Voice.value);
+            //line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
+            line.id = (lineValue.index + 1); //base 1
+            line.zone = line.id
+            line.name = this.cleanData(lineValue.Name.value);
+            line.typeId = this.cleanData(lineValue.Type.value);
+            line.type = constants.ZoneTypes[line.typeId];
+            line.voiceId = this.cleanData(lineValue.Voice.value);
+            line.voiceName = constants.ZoneVoices[line.voiceId];
             return line;
         });
 

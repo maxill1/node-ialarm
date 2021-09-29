@@ -7,6 +7,7 @@ const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const alarmStatus = require('./src/status-decoder')();
 const tcpResponseFormatters = require('./src/tcp-response-formatters')();
+const constants = require('./src/constants');
 
 function MeianClient(host, port, uid, pwd) {
     var self = this;
@@ -107,7 +108,8 @@ function MeianClient(host, port, uid, pwd) {
         if (data.Err && data.Err !== 'ERR|00') {
             self.emit('error', data.Err);
         } else {
-            var event = 'response';
+            //custom event based on query
+            var event = constants.events[self._getCmdName(data)] || constants.events.default;
             if (self.status === 'autenticating') {
                 event = 'connected';
                 self.status = event;
@@ -164,6 +166,23 @@ function MeianClient(host, port, uid, pwd) {
         if (!offset || offset === 0 || !lists[cmdName]) {
             lists[cmdName] = {};
         }
+    }
+
+    /**
+     * Command name from response 
+     * @param {*} response 
+     * @returns 
+     */
+    this._getCmdName = function (response) {
+        //es. Root/Host/GetZone > GetZone
+        if (response && response.Root && response.Root.Host) {
+            const cmdName = Object.keys(response.Root.Host)[0];
+            return cmdName;
+        }
+        if (response && response.Pair && response.Pair.Client) {
+            return 'login';
+        }
+        return undefined;
     }
 
     /**
@@ -889,8 +908,7 @@ function MeianClient(host, port, uid, pwd) {
         });
     };
     self.getAllZones = function (forceReload) {
-        //TODO
-        self.emit('allZones', {});
+        self.getZone('allZones')
     };
     self.getZoneInfo = function (zoneNumber) {
         //TODO
