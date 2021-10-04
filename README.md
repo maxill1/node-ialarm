@@ -1,7 +1,9 @@
 # node-ialarm
 A node library to control iAlarm (https://www.antifurtocasa365.it/) or other chinese 'TCP IP' alarm system like Meian and Emooluxr
 
-inspired by python version https://github.com/RyuzakiKK/pyialarm
+inspired by these projects 
+* https://github.com/RyuzakiKK/pyialarm
+* https://github.com/wildstray/meian-client
 
 ## Installation
 ```
@@ -16,42 +18,66 @@ You have to provide 5 arguments:
 - admin
 - password
 - number of zones/array of zones id (optional, default is 40, can be a number or an array of number)
-- alternative scraper page names (['/RemoteCtr.htm', '/Zone.htm', '/SystemLog.htm'] is default, some alarms may have different page names )
 
-```
-const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15], ['/RemoteCtr.htm', '/Zone.htm', '/SystemLog.htm']);
-alarm.on('command', function (commandResponse) {
-  console.log("command: "+commandResponse);
-});
-alarm.on('response', function (response) {
-  console.log("Responded: "+response);
-});
-alarm.on('error', function (err) {
-  console.log("error: "+err);
-});
+```javascript
+const iAlarm = require('ialarm'); 
+const alarm = new iAlarm("192.168.1.81", "80", "myAdmin", "myPassword", [1,2,5,10,15]);
 
-alarm.on('events', function (events) {
-  console.log("events: "+JSON.stringify(events));
-});
+alarm.getStatus().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
 
-alarm.on('status', function (status) {
-  console.log("status: "+JSON.stringify(status));
-});
+alarm.getEvents().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
 
-alarm.on('allZones', function (allZones) {
-  console.log("allZones: "+JSON.stringify(allZones));
-});
+alarm.getZoneInfo().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
 
-alarm.armStay();
-alarm.disarm();
-alarm.getEvents();
-alarm.getStatus();
-alarm.getAllZones();
+alarm.getZoneInfo(1).then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
+alarm.armStay().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
+//disarm
+alarm.disarm().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
+//bypass zone 1
+alarm.bypassZone(1, true).then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+    //remove bypass on zone 1
+    alarm.bypassZone(1, false).then(function (response) {
+        console.log('response: ' + JSON.stringify(response));
+    }, function (error) {
+        console.log('Error: ' + JSON.stringify(error));
+    }).catch(err => console.error("Fatal:", err));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
 ```
 
 ### functions and emitted events
 #### getStatus
-parses **host/RemoteCtr.htm** then emit **status** with the current status and an array of zone statuses and emit **response** with the full body of the http reponse.
+returns a promise with with the current status and an array of zone statuses
 ```
 {"zones":[{"id":1,"message":"OK"}],"status":"ARMED_HOME"}
 ```
@@ -65,41 +91,36 @@ parses **host/RemoteCtr.htm** then emit **status** with the current status and a
   - lowbat is (status & 32)&&((status & 8)==0) and grabs from web panel this message: "wireless detector low battery"  
   - fault is (status & 64)&&((status & 8)==0) and grabs from web panel this message: "wireless detector loss"  
   - message is the web panel grabbed message for zone
-
+//TODO docs for more properties
 
 #### getEvents
-parses **host/SystemLog.htm** then emit **events** with the last 24 events recorded in the host and emit **response** with the full body of the http reponse.
+the last 100 events recorded in the host
 ```
 {"date":"2018-11-11 07:25:04","zone":"70","message":"Sistema Disarmato"}
 ```
-#### getAllZones
-parses **host/Zone.htm** then emit **allZones** with the 40 zones (or configured number of zones) found on the host.
+#### getZoneInfo
+the configuration of the 40 zones (or configured number of zones) found on the host.
 ```
 { "1" : {"id":"1","name":"Porta","type":"Ritardato"}, "2" : {"id":"2","name":"Cucina","type":"Perimetrale"} }
 ```
-
 #### armAway
-call **host/RemoteCtr.htm** and arm in away mode the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
+arm in away mode the alarm, then return the status exposed by getStatus
 
 #### armStay
-call **host/RemoteCtr.htm** and arm in stay mode the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
+arm in stay mode the alarm, then return the status exposed by getStatus
 
 #### disarm
-call **host/RemoteCtr.htm** and disarm the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
+disarm in stay mode the alarm, then return the status exposed by getStatus
 
 #### cancel
-call **host/RemoteCtr.htm** and cancel the alarm, then emit **command** with the status (ARMED_AWAY, DISARMED, etc)
+cancel the triggered alarm, then return the status exposed by getStatus
+
+#### bypassZone
+bypass/remove bypass of a zone, then return the status exposed by getStatus
+
 
 #### filterStatusZones(zones)
 will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatus**
-```
-alarm.on('status', function (status) {
-  var relevantEvents = alarm.filterStatusZones(status.zones);
-  if(relevantEvents.length>0){
-      console.log("zone events: "+JSON.stringify(relevantEvents, null, 2));
-  }
-});
-```
 
 ## Notes:
 1) some features like zone message are based on iAlarm js reverse enginering, so i haven't fully tested them.

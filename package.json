@@ -1,14 +1,15 @@
 {
     "name": "ialarm",
     "version": "0.3.3",
-    "description": "A node library to control iAlarm (https://www.antifurtocasa365.it/) or other chinese 'TCP IP' alarm system like Meian and Emooluxr",
+    "description": "A node library to control iAlarm/antifurtocasa365, Casasicura/Siqura and other chinese 'TCP IP' alarm system like Meian ST-IVCGT clones and Emooluxr",
     "repository": {
         "type": "git",
         "url": "git://github.com/maxill1/node-ialarm.git"
     },
     "dependencies": {
         "cheerio": "^1.0.0-rc.3",
-        "follow-redirects": "^1.9.0"
+        "follow-redirects": "^1.9.0",
+        "xml-js": "^1.6.11"
     },
     "main": "ialarm.js",
     "scripts": {
