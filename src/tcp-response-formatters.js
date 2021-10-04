@@ -55,6 +55,10 @@ module.exports = function () {
             //L0, L1, L2
             const lineKey = 'L' + queryIndex;
             const element = current[lineKey];
+            if (!element) {
+                //L1, Lx may not exit on last call
+                continue;
+            }
             const elementIndex = offset + queryIndex;
             //index build using offset and L0,L1,L2
             element.index = elementIndex;
@@ -168,19 +172,15 @@ module.exports = function () {
     }
 
     this.GetAlarmStatus = function (data) {
-        console.log("Formatting GetAlarmStatus response");
+        //console.log("Formatting GetAlarmStatus response");
         var status = data.DevStatus.value;
         var exec = TYP.exec(status);
         return alarmStatus.fromTcpValueToStatus(exec[2]);
     }
 
-    this.GetByWay = function (data) {
-        console.log("Formatting GetByWay response");
+    this.GetByWay = function (current, container) {
+        //console.log("Formatting GetByWay response");
 
-        var response = {
-            zones: [],
-            raw: data
-        };
 
         const ZONE_NOT_USED = 0
         const ZONE_IN_USE = (1 << 0)
@@ -190,70 +190,146 @@ module.exports = function () {
         const ZONE_LOW_BATTERY = (1 << 4)
         const ZONE_LOSS = (1 << 5)
 
-        for (const key in data) {
-            const element = data[key];
-            if (element.value) {
-                const value = this.cleanData(element.value);
-                _listBasedFormatter(key, value, response, 'zones', function (lineValue, key, lineNumber) {
-                    var zone = {};
-                    zone.id = lineNumber + 1;
-                    zone.name = key;
-                    zone.status = lineValue;
+        const lastChecked = new Date()
 
-                    zone.inUse = false;
-                    zone.ok = true;
-                    zone.alarm = false;
-                    zone.bypass = false;
-                    zone.lowbat = false;
-                    zone.fault = false;
-                    zone.open = false;
-                    zone.wirelessLoss = false;
+        _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
 
-                    const zoneStatus = zone.status;
+            const value = this.cleanData(lineValue.value);
+            const normalizedIndex = lineValue.index;
 
-                    if (zoneStatus & ZONE_NOT_USED) {
-                        //console.log(`${zone.id}=ZONE_NOT_USED`);
-                        zone.inUse = false;
-                    }
-                    if (zoneStatus & ZONE_IN_USE) {
-                        //console.log(`${zone.id}=ZONE_IN_USE`);
-                        zone.inUse = true;
-                    }
-                    if (zoneStatus & ZONE_ALARM) {
-                        //console.log(`${zone.id}=ZONE_ALARM`);
-                        zone.alarm = true;
-                    }
-                    if (zoneStatus & ZONE_BYPASS) {
-                        //console.log(`${zone.id}=ZONE_BYPASS`);
-                        zone.bypass = true;
-                    }
-                    if (zoneStatus & ZONE_FAULT) {
-                        //console.log(`${zone.id}=ZONE_FAULT`);
-                        zone.fault = true;
-                    }
-                    if (zoneStatus & ZONE_LOW_BATTERY) {
-                        //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
-                        zone.lowbat = true;
-                    }
-                    if (zoneStatus & ZONE_LOSS) {
-                        //console.log(`${zone.id}=ZONE_LOSS`);
-                        zone.wirelessLoss = true;
-                    }
+            var zone = {
+                lastChecked: lastChecked
+            };
+            zone.id = normalizedIndex + 1;
+            zone.name = key;
+            zone.status = value;
 
-                    zone.ok = !zone.alarm
-                        && !zone.alarm
-                        && !zone.fault
-                        && !zone.lowbat
-                        && !zone.loss;
+            zone.inUse = false;
+            zone.ok = true;
+            zone.alarm = false;
+            zone.bypass = false;
+            zone.lowbat = false;
+            zone.fault = false;
+            zone.open = false;
+            zone.wirelessLoss = false;
 
-                    if (zone.ok) {
-                        zone.message = 'OK';
-                    }
+            const zoneStatus = zone.status;
 
-                    return zone;
-                });
+            if (zoneStatus & ZONE_NOT_USED) {
+                //console.log(`${zone.id}=ZONE_NOT_USED`);
+                zone.inUse = false;
             }
-        }
+            if (zoneStatus & ZONE_IN_USE) {
+                //console.log(`${zone.id}=ZONE_IN_USE`);
+                zone.inUse = true;
+            }
+            if (zoneStatus & ZONE_ALARM) {
+                //console.log(`${zone.id}=ZONE_ALARM`);
+                zone.alarm = true;
+            }
+            if (zoneStatus & ZONE_BYPASS) {
+                //console.log(`${zone.id}=ZONE_BYPASS`);
+                zone.bypass = true;
+            }
+            if (zoneStatus & ZONE_FAULT) {
+                //console.log(`${zone.id}=ZONE_FAULT`);
+                zone.fault = true;
+            }
+            if (zoneStatus & ZONE_LOW_BATTERY) {
+                //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
+                zone.lowbat = true;
+            }
+            if (zoneStatus & ZONE_LOSS) {
+                //console.log(`${zone.id}=ZONE_LOSS`);
+                zone.wirelessLoss = true;
+            }
+
+            zone.ok = !zone.alarm
+                && !zone.alarm
+                && !zone.fault
+                && !zone.lowbat
+                && !zone.loss;
+
+            //problem = easy check !ok in clients
+            zone.problem = !zone.ok;
+
+            if (zone.ok) {
+                zone.message = 'OK';
+            }
+
+            return zone;
+        });
+
+        return container;
+
+        // var response = {
+        //     zones: [],
+        //     raw: data
+        // };
+        // for (const key in data) {
+        //     const element = data[key];
+        //     if (element.value) {
+        //         const value = this.cleanData(element.value);
+        //         _listBasedFormatter(key, value, response, 'zones', function (lineValue, key, lineNumber) {
+        //             var zone = {};
+        //             zone.id = lineNumber + 1;
+        //             zone.name = key;
+        //             zone.status = lineValue;
+
+        //             zone.inUse = false;
+        //             zone.ok = true;
+        //             zone.alarm = false;
+        //             zone.bypass = false;
+        //             zone.lowbat = false;
+        //             zone.fault = false;
+        //             zone.open = false;
+        //             zone.wirelessLoss = false;
+
+        //             const zoneStatus = zone.status;
+
+        //             if (zoneStatus & ZONE_NOT_USED) {
+        //                 //console.log(`${zone.id}=ZONE_NOT_USED`);
+        //                 zone.inUse = false;
+        //             }
+        //             if (zoneStatus & ZONE_IN_USE) {
+        //                 //console.log(`${zone.id}=ZONE_IN_USE`);
+        //                 zone.inUse = true;
+        //             }
+        //             if (zoneStatus & ZONE_ALARM) {
+        //                 //console.log(`${zone.id}=ZONE_ALARM`);
+        //                 zone.alarm = true;
+        //             }
+        //             if (zoneStatus & ZONE_BYPASS) {
+        //                 //console.log(`${zone.id}=ZONE_BYPASS`);
+        //                 zone.bypass = true;
+        //             }
+        //             if (zoneStatus & ZONE_FAULT) {
+        //                 //console.log(`${zone.id}=ZONE_FAULT`);
+        //                 zone.fault = true;
+        //             }
+        //             if (zoneStatus & ZONE_LOW_BATTERY) {
+        //                 //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
+        //                 zone.lowbat = true;
+        //             }
+        //             if (zoneStatus & ZONE_LOSS) {
+        //                 //console.log(`${zone.id}=ZONE_LOSS`);
+        //                 zone.wirelessLoss = true;
+        //             }
+
+        //             zone.ok = !zone.alarm
+        //                 && !zone.alarm
+        //                 && !zone.fault
+        //                 && !zone.lowbat
+        //                 && !zone.loss;
+
+        //             if (zone.ok) {
+        //                 zone.message = 'OK';
+        //             }
+
+        //             return zone;
+        //         });
+        //     }
+        // }
         return response;
     }
 
@@ -261,10 +337,13 @@ module.exports = function () {
      * Get zone info
      */
     this.GetZone = function (current, container) {
-        console.log("Formatting GetZone response");
+        //console.log("Formatting GetZone response");
 
         _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
             var line = {};
+            if (!lineValue) {
+                console.log("no lineValue")
+            }
             //line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
             line.id = (lineValue.index + 1); //base 1
             line.zone = line.id
@@ -283,7 +362,7 @@ module.exports = function () {
      * List of events recorded in the alarm (arm, disarm, bypass, alert, etc)
      */
     this.GetLog = function (current, container) {
-        console.log("Formatting GetLog response");
+        //console.log("Formatting GetLog response");
         /*
         raw format
         "L1": { "Time": { "value": "DTA,19|2020.06.04.18.35.15" }, 
@@ -312,7 +391,7 @@ module.exports = function () {
      * Not sure about what this means. They seem to be some CID decoded string
      */
     this.GetEvents = function (data) {
-        console.log("Formatting GetEvents response");
+        //console.log("Formatting GetEvents response");
         var response = {
             events: [],
             raw: data

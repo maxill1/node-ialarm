@@ -25,6 +25,7 @@ module.exports = {
         1301: 'System AC fault',
         1302: 'System battery failure',
         1306: 'Programming changes',
+        1321: 'Alarm bell failure', //Sirena allarme
         1350: 'Communication failure',
         1351: 'Telephone line fault',
         1370: 'Circuit fault',

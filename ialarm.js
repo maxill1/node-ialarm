@@ -1,4 +1,4 @@
-
-var iAlarmDefault = require('./ialarm-scraper');
+//default impl TCP
+var iAlarmDefault = require('./ialarm-tcp');
 
 module.exports = iAlarmDefault
