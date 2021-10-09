@@ -56,7 +56,7 @@ function testLibrary(functionName, arg1, arg2) {
 }
 // implemented
 //testLibrary('getEvents');
-//testLibrary('getStatus');
+testLibrary('getStatus');
 //testLibrary('getZoneInfo');
 //testLibrary('bypassZone', 2, true);
 //testLibrary('bypassZone', 2, false);

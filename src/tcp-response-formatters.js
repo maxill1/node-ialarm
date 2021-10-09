@@ -181,156 +181,26 @@ module.exports = function () {
     this.GetByWay = function (current, container) {
         //console.log("Formatting GetByWay response");
 
-
-        const ZONE_NOT_USED = 0
-        const ZONE_IN_USE = (1 << 0)
-        const ZONE_ALARM = (1 << 1)
-        const ZONE_BYPASS = (1 << 2)
-        const ZONE_FAULT = (1 << 3)
-        const ZONE_LOW_BATTERY = (1 << 4)
-        const ZONE_LOSS = (1 << 5)
-
         const lastChecked = new Date()
 
         _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
 
-            const value = this.cleanData(lineValue.value);
+            const status = this.cleanData(lineValue.value);
             const normalizedIndex = lineValue.index;
 
-            var zone = {
-                lastChecked: lastChecked
+            const booleansAndMessage = alarmStatus.getZoneStatus(status);
+            const zone = {
+                lastChecked: lastChecked,
+                id: normalizedIndex + 1,
+                name: key,
+                status: status,
+                ...booleansAndMessage
             };
-            zone.id = normalizedIndex + 1;
-            zone.name = key;
-            zone.status = value;
-
-            zone.inUse = false;
-            zone.ok = true;
-            zone.alarm = false;
-            zone.bypass = false;
-            zone.lowbat = false;
-            zone.fault = false;
-            zone.open = false;
-            zone.wirelessLoss = false;
-
-            const zoneStatus = zone.status;
-
-            if (zoneStatus & ZONE_NOT_USED) {
-                //console.log(`${zone.id}=ZONE_NOT_USED`);
-                zone.inUse = false;
-            }
-            if (zoneStatus & ZONE_IN_USE) {
-                //console.log(`${zone.id}=ZONE_IN_USE`);
-                zone.inUse = true;
-            }
-            if (zoneStatus & ZONE_ALARM) {
-                //console.log(`${zone.id}=ZONE_ALARM`);
-                zone.alarm = true;
-            }
-            if (zoneStatus & ZONE_BYPASS) {
-                //console.log(`${zone.id}=ZONE_BYPASS`);
-                zone.bypass = true;
-            }
-            if (zoneStatus & ZONE_FAULT) {
-                //console.log(`${zone.id}=ZONE_FAULT`);
-                zone.fault = true;
-            }
-            if (zoneStatus & ZONE_LOW_BATTERY) {
-                //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
-                zone.lowbat = true;
-            }
-            if (zoneStatus & ZONE_LOSS) {
-                //console.log(`${zone.id}=ZONE_LOSS`);
-                zone.wirelessLoss = true;
-            }
-
-            zone.ok = !zone.alarm
-                && !zone.alarm
-                && !zone.fault
-                && !zone.lowbat
-                && !zone.loss;
-
-            //problem = easy check !ok in clients
-            zone.problem = !zone.ok;
-
-            if (zone.ok) {
-                zone.message = 'OK';
-            }
 
             return zone;
         });
 
         return container;
-
-        // var response = {
-        //     zones: [],
-        //     raw: data
-        // };
-        // for (const key in data) {
-        //     const element = data[key];
-        //     if (element.value) {
-        //         const value = this.cleanData(element.value);
-        //         _listBasedFormatter(key, value, response, 'zones', function (lineValue, key, lineNumber) {
-        //             var zone = {};
-        //             zone.id = lineNumber + 1;
-        //             zone.name = key;
-        //             zone.status = lineValue;
-
-        //             zone.inUse = false;
-        //             zone.ok = true;
-        //             zone.alarm = false;
-        //             zone.bypass = false;
-        //             zone.lowbat = false;
-        //             zone.fault = false;
-        //             zone.open = false;
-        //             zone.wirelessLoss = false;
-
-        //             const zoneStatus = zone.status;
-
-        //             if (zoneStatus & ZONE_NOT_USED) {
-        //                 //console.log(`${zone.id}=ZONE_NOT_USED`);
-        //                 zone.inUse = false;
-        //             }
-        //             if (zoneStatus & ZONE_IN_USE) {
-        //                 //console.log(`${zone.id}=ZONE_IN_USE`);
-        //                 zone.inUse = true;
-        //             }
-        //             if (zoneStatus & ZONE_ALARM) {
-        //                 //console.log(`${zone.id}=ZONE_ALARM`);
-        //                 zone.alarm = true;
-        //             }
-        //             if (zoneStatus & ZONE_BYPASS) {
-        //                 //console.log(`${zone.id}=ZONE_BYPASS`);
-        //                 zone.bypass = true;
-        //             }
-        //             if (zoneStatus & ZONE_FAULT) {
-        //                 //console.log(`${zone.id}=ZONE_FAULT`);
-        //                 zone.fault = true;
-        //             }
-        //             if (zoneStatus & ZONE_LOW_BATTERY) {
-        //                 //console.log(`${zone.id}=ZONE_LOW_BATTERY`);
-        //                 zone.lowbat = true;
-        //             }
-        //             if (zoneStatus & ZONE_LOSS) {
-        //                 //console.log(`${zone.id}=ZONE_LOSS`);
-        //                 zone.wirelessLoss = true;
-        //             }
-
-        //             zone.ok = !zone.alarm
-        //                 && !zone.alarm
-        //                 && !zone.fault
-        //                 && !zone.lowbat
-        //                 && !zone.loss;
-
-        //             if (zone.ok) {
-        //                 zone.message = 'OK';
-        //             }
-
-        //             return zone;
-        //         });
-        //     }
-        // }
-        return response;
     }
 
     /**

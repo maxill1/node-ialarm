@@ -102,41 +102,5 @@ module.exports = {
         1: 'Fisso',
         2: 'Ad impulsi',
         3: 'Muto'
-    },
-
-    zoneStatus: {
-        1: {
-            bypass: false,
-            open: false,
-            fault: false,
-            alarm: false,
-            lowbat: false,
-            message: 'OK'
-        },
-        5: {
-            bypass: true,
-            open: false,
-            fault: false,
-            alarm: false,
-            lowbat: false,
-            message: 'Bypassed'
-        },
-        9: {
-            bypass: false,
-            open: false,
-            fault: true,
-            alarm: false,
-            lowbat: false,
-            message: 'Fault'
-        },
-        13: {
-            bypass: true,
-            open: false,
-            fault: true,
-            alarm: false,
-            lowbat: false,
-            message: 'Bypassed and fault'
-        },
-        //TODO more statuses
     }
 };

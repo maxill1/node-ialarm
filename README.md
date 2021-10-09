@@ -92,7 +92,6 @@ returns a promise with with the current status and an array of zone statuses
             "bypass": false, //sensor bypassed
             "lowbat": false, //low battery detected
             "fault": false, //it means the sensors is open
-            "open": false, //it means the sensors is open
             "wirelessLoss": false, //it means the alarm lost connection to this sensor
             "ok": true, // if all the above are false
             "problem": false, // just the negation of "ok" 
