@@ -21,7 +21,7 @@ const xml = messageHandler.extractMessage(tcpMessage)
 console.log('Decoded message ' + xml)
 */
 
-const meianClient = require('../ialarm-tcp');
+const meianClient = require('../ialarm');
 
 var args = {};
 process.argv.slice(2).forEach(function (val) {
@@ -55,7 +55,7 @@ function testLibrary(functionName, arg1, arg2) {
     }).catch(err => console.error("Fatal:", err));
 }
 // implemented
-testLibrary('getEvents');
+//testLibrary('getEvents');
 //testLibrary('getStatus');
 //testLibrary('getZoneInfo');
 //testLibrary('bypassZone', 2, true);
