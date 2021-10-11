@@ -122,6 +122,9 @@ module.exports = function () {
         return zone;
     }
 
+    //3 alarm 
+    //11=alarm & fault
+
     /*
     zoneStatus: {
         1: {

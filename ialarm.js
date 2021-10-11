@@ -2,11 +2,34 @@
 const MeianSocket = require('./src/meian-socket');
 const alarmStatus = require('./src/status-decoder')();
 
-function MeianClient(host, port, uid, pwd) {
+function MeianClient(host, port, uid, pwd, zonesToQuery) {
+
 
     var self = this;
 
     const socket = MeianSocket(host, port, uid, pwd);
+
+    //build zones array from max zone number
+    if (zonesToQuery && !Array.isArray(zonesToQuery)) {
+        const zonesSize = parseInt(zonesToQuery) || 40;
+        zonesToQuery = [];
+        for (let index = 0; index < zonesSize; index++) {
+            let zoneNumber = index + 1; //zone 1, 2, etc
+            zonesToQuery[zoneNumber] = zoneNumber;
+        }
+    }
+
+    /**
+     * Filter configured zones
+     * @param {*} zones 
+     * @returns 
+     */
+    function zoneFilter(zones) {
+        if (zonesToQuery && Array.isArray(zonesToQuery) && Array.isArray(zones)) {
+            return zones.filter(z => zonesToQuery.includes(z.id));
+        }
+        return zones;
+    }
 
     /**
      * Full status: armed/disarmed/triggered and all sensors data with names
@@ -31,7 +54,7 @@ function MeianClient(host, port, uid, pwd) {
 
                 var response = {
                     status: GetAlarmStatus,
-                    zones: GetByWay.zones
+                    zones: zoneFilter(GetByWay.zones)
                 };
 
                 const zoneConfig = GetZone && GetZone.zones;
@@ -152,7 +175,7 @@ function MeianClient(host, port, uid, pwd) {
                             return info;
                         }
                     }
-                    resolve(zones);
+                    resolve(zoneFilter(zones));
                 } else {
                     reject("GetZone returned no data");
                 }
