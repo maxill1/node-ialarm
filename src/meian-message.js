@@ -209,6 +209,27 @@ module.exports.MeianMessageFunctions = {
     },
 
     /**
+     * Alarm name, mac address and network configuration
+     * @returns 
+     */
+    GetNet: function () {
+        var cmd = {};
+        cmd['Mac'] = null;
+        cmd['Name'] = null;
+        cmd['Ip'] = null;
+        cmd['Gate'] = null;
+        cmd['Subnet'] = null;
+        cmd['Dns1'] = null;
+        cmd['Dns2'] = null;
+        cmd['Err'] = null;
+        //request
+        return {
+            seq: 0,
+            message: _prepareMessage('/Root/Host/GetNet', cmd)
+        };
+    },
+
+    /**
      * Set current alarm status
      */
     SetAlarmStatus: function (status) {
@@ -276,7 +297,7 @@ module.exports.MeianMessageFunctions = {
 
 
     // /**
-    //  * TODO may be a list
+    //  * TODO may be a list, should be arm/disarm timer functions
     //  */
     // GetDefense: function () {
     //     var cmd = {};
@@ -306,25 +327,6 @@ module.exports.MeianMessageFunctions = {
     //         message: _prepareMessage('/Root/Host/GetEmail', cmd)
     //     };
     // },
-
-
-    // GetNet: function () {
-    //     var cmd = {};
-    //     cmd['Mac'] = null;
-    //     cmd['Name'] = null;
-    //     cmd['Ip'] = null;
-    //     cmd['Gate'] = null;
-    //     cmd['Subnet'] = null;
-    //     cmd['Dns1'] = null;
-    //     cmd['Dns2'] = null;
-    //     cmd['Err'] = null;
-    //     //request
-    //     return {
-    //         seq: 0,
-    //         message: _prepareMessage('/Root/Host/GetNet', cmd)
-    //     };
-    // },
-
 
     // /**
     //  * TODO may be a list

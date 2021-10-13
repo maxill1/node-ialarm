@@ -136,23 +136,27 @@ module.exports = function () {
                 value = hex_to_ascii(bytes);
                 break;
             case 'HMA':
-                var hma = HMA.exec(input)[1]
-                value = time.strptime(hma, '%H:%M')
+                //00:00
+                var hma = HMA.exec(input)[2]
+                value = hma;
+                //value = time.strptime(hma, '%H:%M')
                 break;
             case 'IPA':
-                value = String(IPA.exec(input)[1])
+                //IPA,16|192.168.1.81
+                value = String(IPA.exec(input)[2])
                 break;
             case 'MAC':
-                value = String(MAC.exec(input)[1])
+                //MAC,17|00:00:xx:xx:xx:xx
+                value = String(MAC.exec(input)[2])
                 break;
             case 'NEA':
-                value = String(NEA.exec(input)[1])
+                value = String(NEA.exec(input)[2])
                 break;
             case 'NUM':
                 value = String(NUM.exec(input)[2])
                 break;
             case 'PWD':
-                value = String(PWD.exec(input)[1])
+                value = String(PWD.exec(input)[2])
                 break;
             case 'S32':
                 value = parseInt(S32.exec(input)[3])
@@ -166,6 +170,10 @@ module.exports = function () {
             default:
                 console.log(`No type found for ${input}`);
                 break;
+        }
+
+        if (value.trim) {
+            value = value.trim();
         }
 
         return value;
@@ -256,6 +264,27 @@ module.exports = function () {
         return container;
     }
 
+    /**
+     * Network config and alarm name
+     * @param {*} data 
+     * @returns 
+     */
+    this.GetNet = function (data) {
+        //console.log("Formatting GetEvents response");
+        var network = {};
+        for (const key in data) {
+            const element = data[key];
+            const prop = key.toLowerCase();
+            if (element.value) {
+                const value = this.cleanData(element.value);
+                network[prop] = value && value.trim && value.trim();
+            } else {
+                network[prop] = '';
+            }
+        }
+        return network;
+    }
+
 
     /*
      * Not sure about what this means. They seem to be some CID decoded string
@@ -277,6 +306,7 @@ module.exports = function () {
         }
         return response;
     }
+
 
     return this;
 }

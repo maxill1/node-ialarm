@@ -32,8 +32,24 @@ function MeianClient(host, port, uid, pwd, zonesToQuery) {
     }
 
     /**
+    * Networking config (ip, mac, etc) and alarm name
+    */
+    self.getNet = function () {
+        return new Promise((resolve, reject) => {
+            return socket.executeCommand('GetNet').then(function ({ data }) {
+                const { GetNet } = data
+                if (!GetNet) {
+                    reject("GetNet returned empty data");
+                }
+                resolve(GetNet);
+            }, function (err) {
+                reject(err);
+            })
+        });
+    }
+
+    /**
      * Full status: armed/disarmed/triggered and all sensors data with names
-     * @param {*} forceZoneInfo 
      */
     self.getStatus = function () {
         return new Promise((resolve, reject) => {
