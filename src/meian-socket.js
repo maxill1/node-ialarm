@@ -59,7 +59,11 @@ function MeianSocket (host, port, uid, pwd) {
          * Disconnect from TCP socket
          */
     function disconnect () {
-      console.log(`${commandNames}: disconnecting from ${host}:${port}`)
+      if (socketStatus === 'connecting') {
+        console.log(`${commandNames}: connection problem to ${host}:${port}???`)
+      } else {
+        console.log(`${commandNames}: disconnecting from ${host}:${port}`)
+      }
       if (socket) {
         socketStatus = 'disconnecting'
         socket.destroy()
@@ -153,9 +157,9 @@ function MeianSocket (host, port, uid, pwd) {
 
               // lets determine the offset size
               const latestRaw = response.raw[response.raw.length - 1]
-              const total = tcpResponseFormatters.cleanData(latestRaw.Total.value)
+              const total = tcpResponseFormatters.cleanData(latestRaw.Total.value) || 0
               const offset = tcpResponseFormatters.cleanData(latestRaw.Offset.value)
-              const ln = tcpResponseFormatters.cleanData(latestRaw.Ln.value)
+              const ln = tcpResponseFormatters.cleanData(latestRaw.Ln.value) || 0
               const newOffset = offset + ln
 
               if ((total > maxListCallSize && (newOffset / 2) > maxListCallSize) || // max calls size (es. GetLog is 512 items and every call has 2 item... 256 calls may take more than 30 sec)
@@ -289,6 +293,7 @@ function MeianSocket (host, port, uid, pwd) {
         }
       })
 
+      console.log(`${commandNames}: connecting to ${host}:${port}`)
       // 1) connect and send login data
       socket.connect(port, host, function () {
         console.log(`${commandNames}: connected to ${host}:${port}`)

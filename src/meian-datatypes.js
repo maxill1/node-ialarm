@@ -24,13 +24,12 @@ module.exports = function MeianDataTypes () {
 		return self.type('PWD', pwd);
 	};
 
-	self.S32 = function(val, pos = 0){
-		return `S32,${pos},${pos}|${val}`;
-	};
-
-	self.MAC = function(mac){
-		return self.type('MAC', mac);
-	};
+  self.S32 = function (val, pos = 0, max) {
+    if (!max) {
+      max = pos
+    }
+    return `S32,${pos},${max}|${val}`
+  }
 
 	self.IPA = function(ip){
 		return self.type('IPA', ip);

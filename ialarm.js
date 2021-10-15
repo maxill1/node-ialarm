@@ -48,9 +48,68 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
   }
 
   /**
+   * Status: armed/disarmed/triggered for areas
+   */
+  self.getStatusArea = function () {
+    return new Promise((resolve, reject) => {
+      const commands = ['GetArea']
+      return socket.executeCommand(commands).then(function ({ data }) {
+        const { GetArea } = data
+
+        const response = {
+          // status_1: "",
+          // status_2: ""
+        }
+        if (!GetArea || !GetArea.area) {
+          console.error('Your alarm is not exposing any areas with GetArea, use GetAlarmStatus instead')
+          self.getStatusAlarm().then((singleAreaStatus) => {
+            resolve({
+              status_1: singleAreaStatus.status,
+              status_2: singleAreaStatus.status,
+              status_3: singleAreaStatus.status,
+              status_4: singleAreaStatus.status
+            })
+          }).catch((e) => {
+            reject(e)
+          })
+        } else {
+          data && data.GetArea.forEach(item => {
+            response[`status_${item.area}`] = item.status
+          })
+          resolve(response)
+        }
+      }, function (err) {
+        reject(err)
+      })
+    })
+  }
+
+  /**
+   * Alarm status: armed/disarmed/triggered and all sensors data with names
+   */
+  self.getStatusAlarm = function () {
+    return new Promise((resolve, reject) => {
+      const commands = ['GetAlarmStatus']
+      return socket.executeCommand(commands).then(function ({ data }) {
+        const { GetAlarmStatus } = data
+        if (!GetAlarmStatus || !GetAlarmStatus) {
+          reject(new Error('GetAlarmStatus returned empty data'))
+        }
+        resolve({
+          status: GetAlarmStatus // we will not observe "TRIGGERED" here
+        })
+      }, function (err) {
+        reject(err)
+      }).catch((e) => {
+        reject(e)
+      })
+    })
+  }
+
+  /**
      * Full status: armed/disarmed/triggered and all sensors data with names
      */
-  self.getStatus = function (zoneInfoCache) {
+  self.getFullStatus = function (zoneInfoCache) {
     return new Promise((resolve, reject) => {
       const commands = ['GetAlarmStatus']
       return socket.executeCommand(commands).then(function ({ data }) {
@@ -78,6 +137,8 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
         })
       }, function (err) {
         reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -144,6 +205,8 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
         }
       }, function (err) {
         reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -151,36 +214,36 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
   /**
      * Arm Away
      */
-  self.armAway = function () {
-    return self.armDisarm('ARMED_AWAY')
+  self.armAway = function (numArea) {
+    return self.armDisarm('ARMED_AWAY', numArea)
   }
 
   /**
      * Arm home
      */
-  self.armHome = function () {
-    return self.armDisarm('ARMED_HOME')
+  self.armHome = function (numArea) {
+    return self.armDisarm('ARMED_HOME', numArea)
   }
 
   /**
      * Arm home alias
      */
-  self.armStay = function () {
-    return self.armHome()
+  self.armStay = function (numArea) {
+    return self.armHome(numArea)
   }
 
   /**
      * Disarm
      */
-  self.disarm = function () {
-    return self.armDisarm('DISARMED')
+  self.disarm = function (numArea) {
+    return self.armDisarm('DISARMED', numArea)
   }
 
   /**
      * Cancel triggered status
      */
-  self.cancel = function () {
-    return self.armDisarm('CANCEL')
+  self.cancel = function (numArea) {
+    return self.armDisarm('CANCEL', numArea)
   }
 
   /**
@@ -194,7 +257,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
       console.log('requesting ' + commands + ' with args ' + args)
       socket.executeCommand(commands, args).then(function (commandResponse) {
         console.log(commandResponse)
-        self.getStatus().then(function (response) {
+        self.getFullStatus().then(function (response) {
           if (response) {
             resolve(response)
           } else {
@@ -214,9 +277,15 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      * @param {*} requestedArmedStatus
      * @returns
      */
-  self.armDisarm = function (requestedArmedStatus) {
-    const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
-    return MeianPromiseWithStatusResponse(['SetAlarmStatus'], [value])
+  self.armDisarm = function (requestedArmedStatus, numArea) {
+    const numAreaIndex = numArea && numArea > 0 ? numArea - 1 : 0
+    if (numAreaIndex > 0) {
+      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      return MeianPromiseWithStatusResponse(['SetArea'], [[numAreaIndex, value]])
+    } else {
+      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      return MeianPromiseWithStatusResponse(['SetAlarmStatus'], [value])
+    }
   }
 
   /**
@@ -250,6 +319,8 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
         }
       }, function (err) {
         reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -268,6 +339,8 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
         }
       }, function (err) {
         reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
