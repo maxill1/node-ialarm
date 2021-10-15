@@ -32,9 +32,9 @@ if (!username || !password) {
   // implemented
   // testLibrary('getNet');
   // testLibrary('getEvents');
-  // testLibrary('getStatusAlarm')
+  testLibrary('getStatusAlarm')
   // testLibrary('getStatusArea')
-  testLibrary('armHome', 3)
+  // testLibrary('armHome', 3)
   // testLibrary('getZoneInfo');
   // testLibrary('bypassZone', 2, true);
   // testLibrary('bypassZone', 2, false);
