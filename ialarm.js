@@ -83,6 +83,10 @@ function MeianClient(host, port, uid, pwd, zonesToQuery) {
                             ...zone,
                             ...info
                         }
+                        //trigger based on zone
+                        if(zone.alarm){
+                            response.status = alarmStatus.fromTcpValueToStatus('4');
+                        }
                     }
                 }
 
