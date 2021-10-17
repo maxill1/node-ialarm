@@ -55,9 +55,9 @@ function testLibrary(functionName, arg1, arg2) {
     }).catch(err => console.error("Fatal:", err));
 }
 // implemented
-testLibrary('getNet');
+//testLibrary('getNet');
 //testLibrary('getEvents');
-//testLibrary('getStatus');
+testLibrary('getStatus');
 //testLibrary('getZoneInfo');
 //testLibrary('bypassZone', 2, true);
 //testLibrary('bypassZone', 2, false);

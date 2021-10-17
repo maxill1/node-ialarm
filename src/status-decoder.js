@@ -27,6 +27,29 @@ module.exports = function () {
     throw new Error('unknown status')
   }
 
+  this.isArmed = function (statusValue) {
+    return ['ARMED_HOME', 'ARMED_AWAY'].includes(statusValue)
+  }
+
+  /**
+   * Alarm is triggered if armed and one of the zones is alarmed, or if any state but a 24 hours zone (type=5) is alarmed
+   * @param {*} zones
+   * @param {*} alarmStatus
+   * @returns
+   */
+  this.isTriggered = function (zones, alarmStatus) {
+    // zone triggered with alarm or 24 hour type (5)
+    if (zones) {
+      const zonesTriggered = zones.filter(z => z.alarm && (this.isArmed(alarmStatus) || z.typeId === 5))
+      if (zonesTriggered && zonesTriggered.length > 0) {
+        const errors = zonesTriggered.map(a => a.id + ' ' + a.name)
+        console.log(`Alarm is ${alarmStatus} and triggered by zones: ${JSON.stringify(errors)}`)
+        return true
+      }
+    }
+    return false
+  }
+
   this.fromTcpValueToStatus = function (value) {
     return _fromValue(value, statusTcp)
   }
