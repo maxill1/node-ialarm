@@ -14,6 +14,7 @@ const host = args.host || '192.168.1.81'
 const port = args.port || 18034
 const username = args.username
 const password = args.password
+const logLevel = args.logLevel
 // var zones = args['zones']?JSON.parse(args['zones']):undefined;
 
 if (!username || !password) {
@@ -22,24 +23,26 @@ if (!username || !password) {
   console.log('will test meianClient on ' + host + ':' + port)
 
   function testLibrary (functionName, arg1, arg2) {
-    const alarm = new MeianClient(host, port, username, password)
+    const alarm = new MeianClient(host, port, username, password, undefined, logLevel)
     alarm[functionName](arg1, arg2).then(function (response) {
       console.log('response: ' + JSON.stringify(response))
-    }, function (error) {
-      console.log('Error: ' + JSON.stringify(error))
-    }).catch(err => console.error('Fatal:', err))
+    }).catch(function (error) {
+      console.log('Error: ', error)
+    })
   }
   // implemented
   // testLibrary('getNet');
-  // testLibrary('getEvents');
-  testLibrary('getStatusAlarm')
+  testLibrary('getEvents')
+  // testLibrary('getStatusAlarm')
   // testLibrary('getStatusArea')
+  // testLibrary('getFullStatus')
+  // testLibrary('getZoneStatus')
   // testLibrary('armHome', 3)
   // testLibrary('getZoneInfo');
-  // testLibrary('bypassZone', 2, true);
+  // testLibrary('bypassZone', 2, true)
   // testLibrary('bypassZone', 2, false);
-  // testLibrary('armAway');
-  // testLibrary('armHome');
+  // testLibrary('armAway')
+  // testLibrary('armHome')
   // testLibrary('disarm');
   // testLibrary('cancel');
 }

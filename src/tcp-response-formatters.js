@@ -94,9 +94,9 @@ module.exports = function () {
   this.cleanData = function (input) {
     let value = input
     const type = TYPES.exec(input) && TYPES.exec(input)[0]
-    if (!type) {
-      console.log(`No type found for ${input}`)
-    }
+    // if (!type) {
+    //   console.log(`No type found for ${input}`)
+    // }
 
     switch (type) {
       case 'BOL':
@@ -189,9 +189,9 @@ module.exports = function () {
   this.GetArea = function (current, container) {
     _parseListableData('areas', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
       const line = {}
-      if (!lineValue) {
-        console.log('no lineValue')
-      }
+      // if (!lineValue) {
+      //   console.log('no lineValue')
+      // }
       // line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
       line.id = (lineValue.index + 1) // base 1
       line.area = line.id
@@ -233,9 +233,9 @@ module.exports = function () {
 
     _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
       const line = {}
-      if (!lineValue) {
-        console.log('no lineValue')
-      }
+      // if (!lineValue) {
+      //   console.log('no lineValue')
+      // }
       // line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
       line.id = (lineValue.index + 1) // base 1
       line.zone = line.id

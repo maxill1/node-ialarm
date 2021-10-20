@@ -2,11 +2,12 @@
 const constants = require('./src/constants')
 const MeianSocket = require('./src/meian-socket')
 const alarmStatus = require('./src/status-decoder')()
+function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
+  const logger = require('./src/logger')(logLevel)
 
-function MeianClient (host, port, uid, pwd, zonesToQuery) {
   const self = this
 
-  const socket = MeianSocket(host, port, uid, pwd)
+  const socket = MeianSocket(host, port, uid, pwd, logLevel)
 
   // build zones array from max zone number
   if (zonesToQuery && !Array.isArray(zonesToQuery)) {
@@ -127,7 +128,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
             resolve(response)
           }
         }, function (error) {
-          console.error(`getZoneStatus returned error: ${JSON.stringify(error)}. Returning alarm status ${GetAlarmStatus} and omitting zones`)
+          logger.error(`getZoneStatus returned error: ${JSON.stringify(error)}. Returning alarm status ${GetAlarmStatus} and omitting zones`)
           // we want to return alarm status anyway
           resolve({
             // alarm triggered status is derived from zones alarm
@@ -198,7 +199,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
               }
             }, function (error) {
               // we will return what we have...
-              console.error(`getZoneInfo returned error: ${JSON.stringify(error)}. Returning alarm status ${response.status} and zones without config info`)
+              logger.error(`getZoneInfo returned error: ${JSON.stringify(error)}. Returning alarm status ${response.status} and zones without config info`)
               resolve(response)
             })
           }
@@ -254,19 +255,15 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      */
   function MeianPromiseWithStatusResponse (commands, args) {
     return new Promise((resolve, reject) => {
-      console.log('requesting ' + commands + ' with args ' + args)
       socket.executeCommand(commands, args).then(function (commandResponse) {
-        console.log(commandResponse)
-        self.getFullStatus().then(function (response) {
-          if (response) {
-            resolve(response)
-          } else {
-            reject(new Error('getStatus returned no data'))
-          }
-        }, function (err) {
-          reject(err)
-        })
-      }, function (err) {
+        return self.getFullStatus()
+      }).then(function (response) {
+        if (response) {
+          resolve(response)
+        } else {
+          reject(new Error('getFullStatus returned no data'))
+        }
+      }).catch(function (err) {
         reject(err)
       })
     })
@@ -294,7 +291,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      * @param {*} bypassed
      */
   self.bypassZone = function (zoneNumber, bypassed) {
-    console.log('bypass zone ' + zoneNumber + '=' + bypassed)
+    logger.info(`bypass zone ${zoneNumber}=${bypassed}`)
     // in tcp call zone is Zero-based numbering
     return MeianPromiseWithStatusResponse(['SetByWay'], [[zoneNumber - 1, bypassed]])
   }

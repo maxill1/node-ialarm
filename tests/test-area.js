@@ -1,6 +1,5 @@
 
 const alarmStatus = require('../src/status-decoder')()
-const meianClient = require('../ialarm')
 
 const args = {}
 process.argv.slice(2).forEach(function (val) {

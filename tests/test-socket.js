@@ -22,12 +22,14 @@ if (!username || !password) {
   function testSocket (commands, commandsArgs) {
     MeianSocket(host, port, username, password).executeCommand(commands, commandsArgs).then(function (data) {
       console.log(JSON.stringify(data))
-    }, function (err) {
-      console.error('Error:', err)
-    }).catch(err => console.error('Fatal:', err))
+    }).catch(function (error) {
+      console.log('Error: ', error)
+    })
   }
-  testSocket(['GetNet'])
-  // testSocket(['GetZone'])
+  // testSocket(['GetNet'])
+  // testSocket(['GetAlarmStatus'])
+  testSocket(['GetZone'])
+  // testSocket(['GetLog'])
   // testSocket(['GetByWay'])
   // testSocket(['SetByWay'], [[0, true]])
   // testSocket(['GetArea'], [[0]])
