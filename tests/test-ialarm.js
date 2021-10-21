@@ -31,8 +31,9 @@ if (!username || !password) {
     })
   }
   // implemented
-  // testLibrary('getNet');
-  testLibrary('getEvents')
+  // testLibrary('getNet')
+  testLibrary('getLastEvents')
+  // testLibrary('getEvents')
   // testLibrary('getStatusAlarm')
   // testLibrary('getStatusArea')
   // testLibrary('getFullStatus')

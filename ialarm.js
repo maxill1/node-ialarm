@@ -323,7 +323,31 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
   }
 
   /**
-     * Logged events (armed, disarmed, etc)
+     * Last 2 logged event (armed, disarmed, bypass, trigger, etc)
+     * @returns
+     */
+  self.getLastEvents = function () {
+    return new Promise((resolve, reject) => {
+      socket.executeCommand(
+        ['GetLog'], // events
+        undefined, // no arg
+        1 // just 1 call
+      ).then(function ({ data }) {
+        if (data && data.GetLog && data.GetLog.logs) {
+          resolve(data.GetLog.logs)
+        } else {
+          reject(new Error('GetLog returned no data'))
+        }
+      }, function (err) {
+        reject(err)
+      }).catch((e) => {
+        reject(e)
+      })
+    })
+  }
+
+  /**
+     * Logged events (armed, disarmed, bypass, trigger, etc)
      * @returns
      */
   self.getEvents = function () {

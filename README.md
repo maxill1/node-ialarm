@@ -40,6 +40,12 @@ alarm.getEvents().then(function (response) {
     console.log('Error: ' + JSON.stringify(error));
 }).catch(err => console.error("Fatal:", err));
 
+alarm.getLastEvent().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
 alarm.getZoneInfo().then(function (response) {
     console.log('response: ' + JSON.stringify(response));
 }, function (error) {
@@ -162,7 +168,7 @@ returns a promise with with the current status and an array of zone statuses
 
 
 #### getEvents
-the last 100 events recorded in the host
+the last 128 events recorded in the host (multiple calls)
 ```json
 {
     "date": "2021-11-09T07:35:38.000Z",
@@ -171,6 +177,18 @@ the last 100 events recorded in the host
     "description": "Disarm report (zone 70)"
 }
 ```
+
+#### getLastEvents
+the last 2 events recorded in the host (1 call)
+```json
+{
+    "date": "2021-11-09T07:35:38.000Z",
+    "zone": 70,
+    "message": "Disarm report",
+    "description": "Disarm report (zone 70)"
+}
+```
+
 #### getZoneInfo
 without arguments `getZoneInfo()`it returns the configuration of the zones found on the host. You can filter a single zone using argument 0: `getZoneInfo(1)`.
  

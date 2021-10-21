@@ -25,8 +25,8 @@ function _getCmdName (response) {
 function MeianSocket (host, port, uid, pwd, logLevel) {
   const logger = require('./logger')(logLevel)
 
-  this.executeCommand = function (commandNames, commandArgs) {
-    const prom = MeianPromise(host, port, uid, pwd, commandNames, commandArgs)
+  this.executeCommand = function (commandNames, commandArgs, listLimit) {
+    const prom = MeianPromise(host, port, uid, pwd, commandNames, commandArgs, listLimit)
     return new Promise((resolve, reject) => {
       // 1) connect and 2) login
       prom.connect().then(function (loginOK) {
@@ -52,8 +52,11 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
    * Connect, login and send messages, then return the response in multiple chained promises
    * @returns
    */
-  function MeianPromise (host, port, uid, pwd, commandNames, commandArgs) {
-  // multiple command execution
+  function MeianPromise (host, port, uid, pwd, commandNames, commandArgs, listLimit) {
+    // default is 128 to avoid problems and let zones populate. We can limit to few if we just want some row from GetLog
+    listLimit = listLimit || constants.maxZones
+
+    // multiple command execution
     if (commandNames && !Array.isArray(commandNames)) {
       commandNames = [commandNames]
       commandArgs = [commandArgs]
@@ -69,7 +72,6 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
 
     // list container
     const lists = {}
-    const maxListCallSize = 100
     const socketTimeout = 10000
     // client status
     let socketStatus = 'disconnected'
@@ -275,7 +277,7 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
                 const ln = tcpResponseFormatters.cleanData(latestRaw.Ln.value) || 0
                 const newOffset = offset + ln
 
-                if ((total > maxListCallSize && (newOffset / 2) > maxListCallSize) || // max calls size (es. GetLog is 512 items and every call has 2 item... 256 calls may take more than 30 sec)
+                if ((total > (listLimit - 1) && (newOffset / 2) > (listLimit - 1)) || // max calls size (es. GetLog is 512 items and every call has 2 item... 256 calls may take more than 30 sec)
                                 newOffset >= total) { // the offset is outside the total
                 // list is complete
                   done = true
