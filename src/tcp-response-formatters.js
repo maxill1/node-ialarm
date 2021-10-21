@@ -180,6 +180,13 @@ module.exports = function () {
     return alarmStatus.fromTcpValueToStatus(exec[2])
   }
 
+  this.SetAlarmStatus = function (data) {
+    // console.log("Formatting GetAlarmStatus response");
+    const status = data.DevStatus.value
+    const exec = TYP.exec(status)
+    return alarmStatus.fromTcpValueToStatus(exec[2])
+  }
+
   /**
    * Alarm areas (used by Focus FC-7688Plus, not working in Meian ST-IVCGT)
    * @param {*} current
@@ -223,6 +230,13 @@ module.exports = function () {
     })
 
     return container
+  }
+
+  this.SetByWay = function (data) {
+    return {
+      zone: this.cleanData(data.Pos.value),
+      bypass: this.cleanData(data.En.value) === 'T'
+    }
   }
 
   /**

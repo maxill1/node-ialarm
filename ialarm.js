@@ -248,21 +248,27 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
   }
 
   /**
-     * promise with command execution and full status response
+     * promise with simple response
      * @param {*} commands
      * @param {*} args
      * @returns
      */
-  function MeianPromiseWithStatusResponse (commands, args) {
+  function PromiseWithSimpleResponse (commands, args) {
     return new Promise((resolve, reject) => {
-      socket.executeCommand(commands, args).then(function (commandResponse) {
-        return self.getFullStatus()
-      }).then(function (response) {
-        if (response) {
-          resolve(response)
+      socket.executeCommand(commands, args).then(function ({ data }) {
+        let response = {}
+        if (Array.isArray(commands) && commands.length > 1) {
+          commands.forEach(name => {
+            response[name] = data[name]
+          })
         } else {
-          reject(new Error('getFullStatus returned no data'))
+          let key = commands
+          if (Array.isArray(commands) && commands.length === 1) {
+            key = commands[0]
+          }
+          response = data[key]
         }
+        resolve(response)
       }).catch(function (err) {
         reject(err)
       })
@@ -278,10 +284,10 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
     const numAreaIndex = numArea && numArea > 0 ? numArea - 1 : 0
     if (numAreaIndex > 0) {
       const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
-      return MeianPromiseWithStatusResponse(['SetArea'], [[numAreaIndex, value]])
+      return PromiseWithSimpleResponse(['SetArea'], [[numAreaIndex, value]])
     } else {
       const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
-      return MeianPromiseWithStatusResponse(['SetAlarmStatus'], [value])
+      return PromiseWithSimpleResponse(['SetAlarmStatus'], [value])
     }
   }
 
@@ -293,7 +299,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
   self.bypassZone = function (zoneNumber, bypassed) {
     logger.info(`bypass zone ${zoneNumber}=${bypassed}`)
     // in tcp call zone is Zero-based numbering
-    return MeianPromiseWithStatusResponse(['SetByWay'], [[zoneNumber - 1, bypassed]])
+    return PromiseWithSimpleResponse(['SetByWay'], [[zoneNumber - 1, bypassed]])
   }
 
   /**
