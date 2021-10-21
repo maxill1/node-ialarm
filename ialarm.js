@@ -1,4 +1,5 @@
 
+const constants = require('./src/constants')
 const MeianSocket = require('./src/meian-socket')
 const alarmStatus = require('./src/status-decoder')()
 
@@ -9,7 +10,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
 
   // build zones array from max zone number
   if (zonesToQuery && !Array.isArray(zonesToQuery)) {
-    const zonesSize = parseInt(zonesToQuery) || 40
+    const zonesSize = parseInt(zonesToQuery) || constants.maxZones
     zonesToQuery = []
     for (let index = 0; index < zonesSize; index++) {
       const zoneNumber = index + 1 // zone 1, 2, etc
