@@ -327,21 +327,12 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
      * @returns
      */
   self.getLastEvents = function () {
-    return new Promise((resolve, reject) => {
-      newSocket().executeCommand(
-        ['GetLog'], // events
-        undefined, // no arg
-        1 // just 1 call
-      ).then(function ({ data }) {
-        if (data && data.GetLog && data.GetLog.logs) {
-          resolve(data.GetLog.logs)
-        } else {
-          reject(new Error('GetLog returned no data'))
-        }
-      }).catch((e) => {
-        reject(e)
-      })
-    })
+    return PromiseWithRetry(
+      ['GetLog'], // events
+      undefined, // no arg
+      1, // just 1 call
+      true
+    )
   }
 
   /**
@@ -349,15 +340,52 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel) {
      * @returns
      */
   self.getEvents = function () {
+    return PromiseWithRetry(['GetLog'], undefined, undefined, true)
+  }
+
+  /**
+     * promise with simple response
+     * @param {*} commands
+     * @param {*} args
+     * @returns
+     */
+  function PromiseWithRetry (commands, args, listCallMax, retry) {
     return new Promise((resolve, reject) => {
-      newSocket().executeCommand(['GetLog']).then(function ({ data }) {
-        if (data && data.GetLog && data.GetLog.logs) {
-          resolve(data.GetLog.logs)
+      newSocket().executeCommand(commands, args, listCallMax).then(function ({ data }) {
+        let response = {}
+
+        // received a push notification by error...
+        if ((data.Alarm || data.Client) && retry) {
+          // weird "push" responses...
+          // retry
+          setTimeout(() => {
+            logger.warning(`Received an "${data.Alarm ? 'Alarm' : 'Client'}" response instead of ${JSON.stringify(commands)}. Retrying...`)
+            PromiseWithRetry(commands, args, listCallMax, false).then((retryResponse) => {
+              resolve(retryResponse)
+            }).catch((e) => {
+              reject(e)
+            })
+          }, 500)
         } else {
-          reject(new Error('GetLog returned no data'))
+          if (Array.isArray(commands) && commands.length > 1) {
+            commands.forEach(name => {
+              response[name] = data[name]
+            })
+          } else {
+            let key = commands
+            if (Array.isArray(commands) && commands.length === 1) {
+              key = commands[0]
+            }
+            response = data[key]
+          }
+          // if (!data[cmd]) {
+          //   reject(new Error(`${cmd} returned no data`))
+          // }
+
+          resolve(response)
         }
-      }).catch((e) => {
-        reject(e)
+      }).catch(function (err) {
+        reject(err)
       })
     })
   }

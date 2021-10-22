@@ -11,14 +11,20 @@ const constants = require('./constants')
  * @returns
  */
 function _getCmdName (response) {
-  // es. Root/Host/GetZone > GetZone
-  if (response && response.Root && response.Root.Host) {
-    const cmdName = Object.keys(response.Root.Host)[0]
-    return cmdName
+  const root = response && response.Root
+  if (root) {
+  // es. Root/Host/GetZone > GetZone Root/Host/Alarm (push notification)
+    if (root.Host) {
+      const cmdName = Object.keys(root.Host)[0]
+      return cmdName
+    }
+    // login Root/Pair/Client
+    if (root.Pair && root.Pair) {
+      const cmdName = Object.keys(root.Pair)[0]
+      return cmdName
+    }
   }
-  if (response && response.Pair && response.Pair.Client) {
-    return 'login'
-  }
+
   return undefined
 }
 
@@ -158,7 +164,7 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
           socketStatus = loginMsg.socketStatus
 
           // 2) Send the login request
-          self.sendMessage(loginMsg, { command: 'login' }).then((loginResponse) => {
+          self.sendMessage(loginMsg, { command: 'Client' }).then((loginResponse) => {
             logger.log('debug', `${promiseId}: logged in to ${host}:${port}`)
             resolve('OK')
           }).catch((e) => {
@@ -248,22 +254,24 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
               reject(new Error(`Alarm responded with ${JSON.stringify(data.Err)}`))
             } else {
             // custom event based on query
-              let event = constants.events[cmdName] || // custom command
+              const event = constants.events[cmdName] || // custom command
                             cmdName || // host command (GetZone, GetByWay)
                             constants.events.default // response;
               if (socketStatus === 'autenticating') {
-                event = 'connected'
-                socketStatus = event
+                socketStatus = 'connected'
+              }
+
+              // requested something but received another response...yes it happens, most of the time the response is a push notification "Alarm" command
+              if (cmdName === 'Alarm') {
+                logger.warning(`Requested ${commandPrettyName} but received a push notification...`)
               }
 
               // raw response or formatted response
               let response = data
               // data formatters
-              if (data.Root.Host) {
-                const formatter = tcpResponseFormatters[cmdName]
-                if (formatter) {
-                  response = formatter(data.Root.Host[cmdName], lists[cmdName])
-                }
+              const formatter = tcpResponseFormatters[cmdName]
+              if (formatter) {
+                response = formatter(data.Root.Host[cmdName], lists[cmdName])
               }
 
               let done = false

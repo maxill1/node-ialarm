@@ -334,5 +334,34 @@ module.exports = function () {
     return response
   }
 
+  /*
+  Push events like
+  <Root>
+    <Host>
+      <Alarm>
+        <Cid>STR,4|3441</Cid>
+        <Content>STR,12|M. Partielle</Content>
+        <Time>DTA|2018.09.02.01.12.01</Time>
+        <Zone>S32,0,99|70</Zone>
+        <ZoneName>STR,16|</ZoneName>
+        <Name>STR,15|ORION IP2 </Name>
+        <Err/>
+      </Alarm>
+    </Host>
+  </Root>
+  */
+  this.Alarm = function (data) {
+    const event = data.Cid && this.cleanData(data.Cid.value)
+    return {
+      cid: constants.cid[event] || event,
+      content: data.Content && this.cleanData(data.Content.value),
+      time: data.Time && this.cleanData(data.Time.value),
+      zone: data.Zone && this.cleanData(data.Zone.value),
+      zoneName: data.ZoneName && this.cleanData(data.ZoneName.value),
+      name: data.Name && this.cleanData(data.Name.value)
+
+    }
+  }
+
   return this
 }
