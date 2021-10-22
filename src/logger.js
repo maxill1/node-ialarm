@@ -16,5 +16,12 @@ module.exports = function (level) {
     // })
     ]
   })
+  logger.warn = function (arg1, arg2, arg3, arg4) {
+    logger.log('warning', arg1, arg2, arg3, arg4)
+  }
+  logger.debug = function (arg1, arg2, arg3, arg4) {
+    logger.log('debug', arg1, arg2, arg3, arg4)
+  }
+
   return logger
 }

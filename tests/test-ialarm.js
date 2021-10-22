@@ -32,10 +32,10 @@ if (!username || !password) {
   }
   // implemented
   // testLibrary('getNet')
-  testLibrary('getLastEvents')
+  // testLibrary('getLastEvents')
   // testLibrary('getEvents')
   // testLibrary('getStatusAlarm')
-  // testLibrary('getStatusArea')
+  testLibrary('getStatusArea')
   // testLibrary('getFullStatus')
   // testLibrary('getZoneStatus')
   // testLibrary('armHome', 3)

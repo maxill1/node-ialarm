@@ -33,19 +33,22 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
         // 3) command sequence
         return prom.sendCommands()
       }).then((promiseData) => {
-        logger.info(`${JSON.stringify(commandNames)}: resolved`)
-        // 4) disconnect socket
-        prom.disconnect()
+        logger.debug(`${prom.promiseId}: data resolved`)
         // 5) resolve data
         resolve(promiseData)
+        // 4) disconnect socket
+        prom.disconnect()
       }).catch((e) => {
-        logger.error(`${JSON.stringify(commandNames)}: throw an error:`, e)
+        logger.error(`${prom.promiseId}: throw an error:`, e)
         reject(e)
+      }).finally(() => {
+        logger.log('debug', `${prom.promiseId}: promise completed`)
       })
-      // .finally(() => {
-      //   logger.log('debug', `${JSON.stringify(commandNames)}: executed`)
-      // })
     })
+  }
+
+  function randomId (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
   }
 
   /**
@@ -53,12 +56,16 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
    * @returns
    */
   function MeianPromise (host, port, uid, pwd, commandNames, commandArgs, listLimit) {
+    const self = this
+
     // default is 128 to avoid problems and let zones populate. We can limit to few if we just want some row from GetLog
     listLimit = listLimit || constants.maxZones
 
     // multiple command execution
     if (commandNames && !Array.isArray(commandNames)) {
       commandNames = [commandNames]
+    }
+    if (commandArgs && !Array.isArray(commandArgs)) {
       commandArgs = [commandArgs]
     }
 
@@ -66,9 +73,11 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
       throw new Error('No command provided to send')
     }
 
+    const promiseId = `${randomId(1, 9999)}-${JSON.stringify(commandNames)}${commandArgs ? JSON.stringify(commandArgs) : ''}`
+    self.promiseId = promiseId
+
     // default
     port = port || 18034
-    const self = this
 
     // list container
     const lists = {}
@@ -99,8 +108,8 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
 
     self.disconnect = function () {
       if (socketStatus !== 'disconnected' || socket.connecting || socket.pending) {
-        logger.log('debug', `${commandNames}: requested disconnection from ${host}:${port} ${socket.connecting ? '(connecting)' : ''} ${socket.pending ? '(pending)' : ''}`)
-        socket.end()
+        logger.log('debug', `${promiseId}: requested disconnection from ${host}:${port} ${socket.connecting ? '(connecting)' : ''} ${socket.pending ? '(pending)' : ''}`)
+        socket.destroy()
       }
     }
 
@@ -111,46 +120,46 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
     self.connect = function () {
       socketStatus = 'connecting'
       return new Promise((resolve, reject) => {
-        logger.log('debug', `${commandNames}: connecting to ${host}:${port}`)
+        logger.log('debug', `${promiseId}: connecting to ${host}:${port}`)
 
         // handle tcp timeout
         socket.on('timeout', (e) => {
-          logger.error(`${commandNames} tcp socket timeout`)
-          socket.end()
-          reject(new Error(`${commandNames} tcp socket timeout`))
+          logger.error(`${promiseId} tcp socket timeout`)
+          socket.destroy()
+          reject(new Error(`${promiseId} tcp socket timeout`))
         })
         // handle errors
         socket.on('error', function (error) {
-          logger.error(`${commandNames}: error ${error && error.message}`)
+          logger.error(`${promiseId}: error ${error && error.message}`)
           reject(error)
         })
 
         socket.on('connect', () => {
           socketStatus = 'connected'
-          logger.log('debug', `${commandNames}: connected to ${host}:${port}`)
+          logger.log('debug', `${promiseId}: connected to ${host}:${port}`)
         })
 
         // handle connection closed by other side
         socket.on('close', function (hadError) {
           socketStatus = 'disconnected'
-          logger.log('debug', `${commandNames}: connection closed on ${host}:${port} ${hadError ? 'with error' : ''}`)
+          logger.log('debug', `${promiseId}: connection closed on ${host}:${port} ${hadError ? 'with error' : ''}`)
         })
 
         socket.on('end', () => {
           socketStatus = 'disconnected'
-          logger.log('debug', `${commandNames}: disconnected from ${host}:${port}`)
+          logger.log('debug', `${promiseId}: disconnected from ${host}:${port}`)
         })
 
         // 1) connect and send login data
         socket.connect(port, host, function () {
-          logger.log('debug', `${commandNames}: logging in to ${host}:${port}`)
+          logger.log('debug', `${promiseId}: logging in to ${host}:${port}`)
 
           const loginMsg = MeianMessageFunctions.Client(uid, pwd)
           socketStatus = loginMsg.socketStatus
 
           // 2) Send the login request
           self.sendMessage(loginMsg, { command: 'login' }).then((loginResponse) => {
-            logger.log('debug', `${commandNames}: logged in to ${host}:${port}`)
+            logger.log('debug', `${promiseId}: logged in to ${host}:${port}`)
             resolve('OK')
           }).catch((e) => {
             reject(e)
@@ -181,13 +190,6 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
               },
               promiseData)
           })
-
-          if (currentIndex === commandNames.length - 1) {
-            prom.finally(() => {
-            // terminating io
-              socket.destroy()
-            })
-          }
           return prom
         },
         Promise.resolve()
@@ -200,7 +202,7 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
     self.sendMessage = function (msg, cmd, promiseData) {
       const { command, args } = cmd
 
-      const commandPrettyName = `${command}${args ? '(' + JSON.stringify(args) + ')' : ''}`
+      const commandPrettyName = `${promiseId}-${command}${args ? '(' + JSON.stringify(args) + ')' : ''}`
 
       logger.log('debug', `${commandPrettyName}: sending command`)
       if (!promiseData) {
