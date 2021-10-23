@@ -22,13 +22,25 @@ You have to provide 5 arguments:
 const iAlarm = require('ialarm'); 
 const alarm = new iAlarm("192.168.1.81", "18034", "myAdmin", "myPassword", [1,2,5,10,15]);
 
-alarm.getStatus().then(function (response) {
+alarm.getStatusAlarm().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
+alarm.getStatusArea().then(function (response) {
     console.log('response: ' + JSON.stringify(response));
 }, function (error) {
     console.log('Error: ' + JSON.stringify(error));
 }).catch(err => console.error("Fatal:", err));
 
 alarm.getEvents().then(function (response) {
+    console.log('response: ' + JSON.stringify(response));
+}, function (error) {
+    console.log('Error: ' + JSON.stringify(error));
+}).catch(err => console.error("Fatal:", err));
+
+alarm.getLastEvent().then(function (response) {
     console.log('response: ' + JSON.stringify(response));
 }, function (error) {
     console.log('Error: ' + JSON.stringify(error));
@@ -75,7 +87,56 @@ alarm.bypassZone(1, true).then(function (response) {
 ```
 
 ### functions and emitted events
-#### getStatus
+#### getStatusAlarm
+returns a promise with with the current status 
+```json
+{
+    "status": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
+}
+```
+
+#### getStatusArea
+returns a promise with with the current status for all areas
+```json
+{
+    "status_1": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
+    "status_2": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
+    "status_3": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
+    "status_4": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
+}
+```
+
+#### getZonesStatus
+returns a promise with with the current status of zones
+```json
+{
+    "zones": [
+        {
+            "lastChecked": "2021-10-09T06:45:52.770Z", //last checked 
+            "id": 1, //zone number
+            "zone": 1, //same as id
+            "name": "Ingresso", //zone friendly name
+            "status": 1, //tcp zone status (used to decode ok, alarm, bypass, lowbatt, fault, wirelessLoss, etc)
+            "inUse": true, //inUse=false means that the zone is disabled on the alarm 
+            "alarm": false, //sensor triggered
+            "bypass": false, //sensor bypassed
+            "lowbat": false, //low battery detected
+            "fault": false, //it means the sensors is open
+            "wirelessLoss": false, //it means the alarm lost connection to this sensor
+            "ok": true, // if all the above are false
+            "problem": false, // just the negation of "ok" 
+            "message": "OK", //message decoded from "status" property
+            "typeId": 1, //zone type id
+            "type": "Ritardata",  //zone type name, decoded from typeId
+            "voiceId": 1, //alarm bell type
+            "voiceName": "Fisso" //alarm bell type name, decoded from voiceId
+        }
+    ]
+}
+```
+
+
+#### getFullStatus
 returns a promise with with the current status and an array of zone statuses
 ```json
 {
@@ -105,8 +166,9 @@ returns a promise with with the current status and an array of zone statuses
 }
 ```
 
+
 #### getEvents
-the last 100 events recorded in the host
+the last 128 events recorded in the host (multiple calls)
 ```json
 {
     "date": "2021-11-09T07:35:38.000Z",
@@ -115,6 +177,18 @@ the last 100 events recorded in the host
     "description": "Disarm report (zone 70)"
 }
 ```
+
+#### getLastEvents
+the last 2 events recorded in the host (1 call)
+```json
+{
+    "date": "2021-11-09T07:35:38.000Z",
+    "zone": 70,
+    "message": "Disarm report",
+    "description": "Disarm report (zone 70)"
+}
+```
+
 #### getZoneInfo
 without arguments `getZoneInfo()`it returns the configuration of the zones found on the host. You can filter a single zone using argument 0: `getZoneInfo(1)`.
  
@@ -130,20 +204,20 @@ without arguments `getZoneInfo()`it returns the configuration of the zones found
     }
 ```
 #### armAway
-arm in away mode the alarm, then return the status exposed by getStatus
+arm in away mode the alarm, then return the status exposed by getStatusAlarm
 
 #### armStay
-arm in stay mode the alarm, then return the status exposed by getStatus
+arm in stay mode the alarm, then return the status exposed by getStatusAlarm
 
 #### disarm
-disarm in stay mode the alarm, then return the status exposed by getStatus
+disarm in stay mode the alarm, then return the status exposed by getStatusAlarm
 
 #### cancel
-cancel the triggered alarm, then return the status exposed by getStatus
+cancel the triggered alarm, then return the status exposed by getStatusAlarm
 
 #### bypassZone
-bypass/remove bypass of a zone, then return the status exposed by getStatus
+bypass/remove bypass of a zone, then return the status exposed by getStatusAlarm
 
 
 #### filterStatusZones(zones)
-will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatus**
+will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatusAlarm**

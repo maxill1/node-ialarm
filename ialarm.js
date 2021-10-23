@@ -3,10 +3,15 @@ const constants = require('./src/constants')
 const MeianSocket = require('./src/meian-socket')
 const alarmStatus = require('./src/status-decoder')()
 
-function MeianClient (host, port, uid, pwd, zonesToQuery) {
-  const self = this
+// we use this counter to delay concurrent executeCommand calls
+let requestRunning = 0
 
-  const socket = MeianSocket(host, port, uid, pwd)
+function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDelay) {
+  const logger = require('./src/logger')(logLevel)
+
+  concurrentDelay = concurrentDelay || 200
+
+  const self = this
 
   // build zones array from max zone number
   if (zonesToQuery && !Array.isArray(zonesToQuery)) {
@@ -30,19 +35,94 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
     return zones
   }
 
+  function executeCommand (commands, args, listCallMax) {
+    requestRunning++
+    const delay = requestRunning * concurrentDelay
+    return new Promise((resolve, reject) => {
+      console.log(`${JSON.stringify(commands)}: concurrent commands, delaying ${delay}ms`)
+      setTimeout(() => {
+        MeianSocket(host, port, uid, pwd, logLevel).executeCommand(commands, args, listCallMax)
+          .then(resolve)
+          .catch(reject).finally(() => {
+            requestRunning--
+            if (requestRunning < 0) {
+              requestRunning = 0
+            }
+          })
+      }, delay)
+    })
+  }
+
   /**
     * Networking config (ip, mac, etc) and alarm name
     */
   self.getNet = function () {
     return new Promise((resolve, reject) => {
-      return socket.executeCommand('GetNet').then(function ({ data }) {
+      return executeCommand('GetNet').then(function ({ data }) {
         const { GetNet } = data
         if (!GetNet) {
           reject(new Error('GetNet returned empty data'))
         }
         resolve(GetNet)
-      }, function (err) {
-        reject(err)
+      }).catch((e) => {
+        reject(e)
+      })
+    })
+  }
+
+  /**
+   * Status: armed/disarmed/triggered for areas
+   */
+  self.getStatusArea = function () {
+    return new Promise((resolve, reject) => {
+      const commands = ['GetArea']
+      return executeCommand(commands).then(function ({ data }) {
+        const { GetArea } = data
+
+        const response = {
+          // status_1: "",
+          // status_2: ""
+        }
+        if (!GetArea || !GetArea.area) {
+          logger.warn('Your alarm is not exposing any areas with GetArea, use GetAlarmStatus instead')
+          self.getStatusAlarm().then((singleAreaStatus) => {
+            resolve({
+              status_1: singleAreaStatus.status,
+              status_2: singleAreaStatus.status,
+              status_3: singleAreaStatus.status,
+              status_4: singleAreaStatus.status
+            })
+          }).catch((e) => {
+            reject(e)
+          })
+        } else {
+          data && data.GetArea.forEach(item => {
+            response[`status_${item.area}`] = item.status
+          })
+          resolve(response)
+        }
+      }).catch((e) => {
+        reject(e)
+      })
+    })
+  }
+
+  /**
+   * Alarm status: armed/disarmed/triggered and all sensors data with names
+   */
+  self.getStatusAlarm = function () {
+    return new Promise((resolve, reject) => {
+      const commands = ['GetAlarmStatus']
+      return executeCommand(commands).then(function ({ data }) {
+        const { GetAlarmStatus } = data
+        if (!GetAlarmStatus || !GetAlarmStatus) {
+          reject(new Error('GetAlarmStatus returned empty data'))
+        }
+        resolve({
+          status: GetAlarmStatus // we will not observe "TRIGGERED" here
+        })
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -50,10 +130,10 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
   /**
      * Full status: armed/disarmed/triggered and all sensors data with names
      */
-  self.getStatus = function (zoneInfoCache) {
+  self.getFullStatus = function (zoneInfoCache) {
     return new Promise((resolve, reject) => {
       const commands = ['GetAlarmStatus']
-      return socket.executeCommand(commands).then(function ({ data }) {
+      return executeCommand(commands).then(function ({ data }) {
         const { GetAlarmStatus } = data
         // sensor status with names, type, etc
         self.getZoneStatus(GetAlarmStatus, zoneInfoCache).then(function (GetByWay) {
@@ -68,7 +148,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
             resolve(response)
           }
         }, function (error) {
-          console.error(`getZoneStatus returned error: ${JSON.stringify(error)}. Returning alarm status ${GetAlarmStatus} and omitting zones`)
+          logger.error(`getZoneStatus returned error: ${JSON.stringify(error)}. Returning alarm status ${GetAlarmStatus} and omitting zones`)
           // we want to return alarm status anyway
           resolve({
             // alarm triggered status is derived from zones alarm
@@ -76,8 +156,8 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
             zones: [] // no zone data
           })
         })
-      }, function (err) {
-        reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -110,7 +190,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
     }
 
     return new Promise((resolve, reject) => {
-      return socket.executeCommand('GetByWay').then(function ({ data }) {
+      return executeCommand('GetByWay').then(function ({ data }) {
         const { GetByWay } = data
         if (!GetByWay) {
           reject(new Error('GetByWay returned empty data'))
@@ -137,13 +217,13 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
               }
             }, function (error) {
               // we will return what we have...
-              console.error(`getZoneInfo returned error: ${JSON.stringify(error)}. Returning alarm status ${response.status} and zones without config info`)
+              logger.error(`getZoneInfo returned error: ${JSON.stringify(error)}. Returning alarm status ${response.status} and zones without config info`)
               resolve(response)
             })
           }
         }
-      }, function (err) {
-        reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
@@ -151,59 +231,61 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
   /**
      * Arm Away
      */
-  self.armAway = function () {
-    return self.armDisarm('ARMED_AWAY')
+  self.armAway = function (numArea) {
+    return self.armDisarm('ARMED_AWAY', numArea)
   }
 
   /**
      * Arm home
      */
-  self.armHome = function () {
-    return self.armDisarm('ARMED_HOME')
+  self.armHome = function (numArea) {
+    return self.armDisarm('ARMED_HOME', numArea)
   }
 
   /**
      * Arm home alias
      */
-  self.armStay = function () {
-    return self.armHome()
+  self.armStay = function (numArea) {
+    return self.armHome(numArea)
   }
 
   /**
      * Disarm
      */
-  self.disarm = function () {
-    return self.armDisarm('DISARMED')
+  self.disarm = function (numArea) {
+    return self.armDisarm('DISARMED', numArea)
   }
 
   /**
      * Cancel triggered status
      */
-  self.cancel = function () {
-    return self.armDisarm('CANCEL')
+  self.cancel = function (numArea) {
+    return self.armDisarm('CANCEL', numArea)
   }
 
   /**
-     * promise with command execution and full status response
+     * promise with simple response
      * @param {*} commands
      * @param {*} args
      * @returns
      */
-  function MeianPromiseWithStatusResponse (commands, args) {
+  function PromiseWithSimpleResponse (commands, args) {
     return new Promise((resolve, reject) => {
-      console.log('requesting ' + commands + ' with args ' + args)
-      socket.executeCommand(commands, args).then(function (commandResponse) {
-        console.log(commandResponse)
-        self.getStatus().then(function (response) {
-          if (response) {
-            resolve(response)
-          } else {
-            reject(new Error('getStatus returned no data'))
+      executeCommand(commands, args).then(function ({ data }) {
+        let response = {}
+        if (Array.isArray(commands) && commands.length > 1) {
+          commands.forEach(name => {
+            response[name] = data[name]
+          })
+        } else {
+          let key = commands
+          if (Array.isArray(commands) && commands.length === 1) {
+            key = commands[0]
           }
-        }, function (err) {
-          reject(err)
-        })
-      }, function (err) {
+          response = data[key]
+        }
+        resolve(response)
+      }).catch(function (err) {
         reject(err)
       })
     })
@@ -214,9 +296,15 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      * @param {*} requestedArmedStatus
      * @returns
      */
-  self.armDisarm = function (requestedArmedStatus) {
-    const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
-    return MeianPromiseWithStatusResponse(['SetAlarmStatus'], [value])
+  self.armDisarm = function (requestedArmedStatus, numArea) {
+    const numAreaIndex = numArea && numArea > 0 ? numArea - 1 : 0
+    if (numAreaIndex > 0) {
+      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      return PromiseWithSimpleResponse(['SetArea'], [[numAreaIndex, value]])
+    } else {
+      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      return PromiseWithSimpleResponse(['SetAlarmStatus'], [value])
+    }
   }
 
   /**
@@ -225,9 +313,9 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      * @param {*} bypassed
      */
   self.bypassZone = function (zoneNumber, bypassed) {
-    console.log('bypass zone ' + zoneNumber + '=' + bypassed)
+    logger.info(`bypass zone ${zoneNumber}=${bypassed}`)
     // in tcp call zone is Zero-based numbering
-    return MeianPromiseWithStatusResponse(['SetByWay'], [[zoneNumber - 1, bypassed]])
+    return PromiseWithSimpleResponse(['SetByWay'], [[zoneNumber - 1, bypassed]])
   }
 
   /**
@@ -235,7 +323,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
      */
   self.getZoneInfo = function (zoneNumber) {
     return new Promise((resolve, reject) => {
-      socket.executeCommand(['GetZone']).then(function (response) {
+      executeCommand(['GetZone']).then(function (response) {
         if (response && response.data && response.data.GetZone) {
           const zones = response.data.GetZone.zones
           if (zoneNumber) {
@@ -248,25 +336,75 @@ function MeianClient (host, port, uid, pwd, zonesToQuery) {
         } else {
           reject(new Error('GetZone returned no data'))
         }
-      }, function (err) {
-        reject(err)
+      }).catch((e) => {
+        reject(e)
       })
     })
   }
 
   /**
-     * Logged events (armed, disarmed, etc)
+     * Last 2 logged event (armed, disarmed, bypass, trigger, etc)
+     * @returns
+     */
+  self.getLastEvents = function () {
+    return PromiseWithRetry(
+      ['GetLog'], // events
+      undefined, // no arg
+      1, // just 1 call
+      true
+    )
+  }
+
+  /**
+     * Logged events (armed, disarmed, bypass, trigger, etc)
      * @returns
      */
   self.getEvents = function () {
+    return PromiseWithRetry(['GetLog'], undefined, undefined, true)
+  }
+
+  /**
+     * promise with simple response
+     * @param {*} commands
+     * @param {*} args
+     * @returns
+     */
+  function PromiseWithRetry (commands, args, listCallMax, retry) {
     return new Promise((resolve, reject) => {
-      socket.executeCommand(['GetLog']).then(function ({ data }) {
-        if (data && data.GetLog && data.GetLog.logs) {
-          resolve(data.GetLog.logs)
+      executeCommand(commands, args, listCallMax).then(function ({ data }) {
+        let response = {}
+
+        // received a push notification by error...
+        if ((data.Alarm || data.Client) && retry) {
+          // weird "push" responses...
+          // retry
+          setTimeout(() => {
+            logger.warning(`Received an "${data.Alarm ? 'Alarm' : 'Client'}" response instead of ${JSON.stringify(commands)}. Retrying...`)
+            PromiseWithRetry(commands, args, listCallMax, false).then((retryResponse) => {
+              resolve(retryResponse)
+            }).catch((e) => {
+              reject(e)
+            })
+          }, 500)
         } else {
-          reject(new Error('GetLog returned no data'))
+          if (Array.isArray(commands) && commands.length > 1) {
+            commands.forEach(name => {
+              response[name] = data[name]
+            })
+          } else {
+            let key = commands
+            if (Array.isArray(commands) && commands.length === 1) {
+              key = commands[0]
+            }
+            response = data[key]
+          }
+          // if (!data[cmd]) {
+          //   reject(new Error(`${cmd} returned no data`))
+          // }
+
+          resolve(response)
         }
-      }, function (err) {
+      }).catch(function (err) {
         reject(err)
       })
     })
