@@ -37,9 +37,20 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
 
   function executeCommand (commands, args, listCallMax) {
     requestRunning++
-    const delay = requestRunning * concurrentDelay
+    let delay = (requestRunning * concurrentDelay) || 0
+    // reset delay or instant commands
+    if (delay > 10000 || commands.includes('SetAlarmStatus')) {
+      requestRunning = 0
+      delay = 0
+      if (delay > 10000) {
+        console.log(`High delay on commands "${JSON.stringify(commands)}" (${delay}ms): currently running ${requestRunning} requests, anyway delay is resetted to 0ms`)
+      }
+    }
+
     return new Promise((resolve, reject) => {
-      console.log(`${JSON.stringify(commands)}: concurrent commands, delaying ${delay}ms`)
+      if (delay) {
+        console.log(`${JSON.stringify(commands)}: concurrent commands, delaying ${delay}ms`)
+      }
       setTimeout(() => {
         MeianSocket(host, port, uid, pwd, logLevel).executeCommand(commands, args, listCallMax)
           .then(resolve)
