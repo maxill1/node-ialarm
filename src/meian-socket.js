@@ -31,30 +31,78 @@ function _getCmdName (response) {
 function MeianSocket (host, port, uid, pwd, logLevel) {
   const logger = require('./logger')(logLevel)
 
-  this.executeCommand = function (commandNames, commandArgs, listLimit) {
-    const prom = MeianPromise(host, port, uid, pwd, commandNames, commandArgs, listLimit)
-    return new Promise((resolve, reject) => {
-      // 1) connect and 2) login
-      prom.connect().then(function (loginOK) {
-        // 3) command sequence
-        return prom.sendCommands()
-      }).then((promiseData) => {
-        logger.debug(`${prom.promiseId}: data resolved`)
-        // 5) resolve data
-        resolve(promiseData)
-        // 4) disconnect socket
-        prom.disconnect()
-      }).catch((e) => {
-        logger.error(`${prom.promiseId}: throw an error:`, e)
-        reject(e)
-      }).finally(() => {
-        logger.log('debug', `${prom.promiseId}: promise completed`)
-      })
-    })
-  }
-
+  /**
+   * random id for concurrency and logging purposes
+   * @param {*} min
+   * @param {*} max
+   * @returns
+   */
   function randomId (min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
+  /**
+   * Connect to the TCP socket and execute all the commands
+   * @param {*} commandNames
+   * @param {*} commandArgs
+   * @param {*} listLimit
+   * @returns
+   */
+  this.executeCommand = async function (commandNames, commandArgs, listLimit) {
+    const prom = MeianPromise(host, port, uid, pwd, commandNames, commandArgs, listLimit)
+    try {
+      // 1) connect and 2) login
+      const loginOk = await prom.connect()
+      logger.debug(`Logged in: ${loginOk}`)
+      // 3) command sequence
+      const promiseData = await prom.sendCommands()
+      logger.debug(`${prom.promiseId}: data resolved`)
+      // 4) disconnect socket
+      prom.disconnect()
+      // 5) resolve data
+      logger.log('debug', `${prom.promiseId}: promise completed`)
+      return promiseData
+    } catch (error) {
+      logger.error(`${prom.promiseId}: throw an error:`, error)
+      return error
+    }
+  }
+
+  /**
+   * singleton instance of socket
+   */
+  const MeianConnection = {
+    socket: (function () {
+      const s = new net.Socket()
+      // default timeout 10 seconds
+      s.setTimeout(10000)
+      return s
+    }()),
+    disconnect: function () {
+      MeianConnection.socket.destroy()
+    },
+    // client status
+    status: 'disconnected',
+    isConnected: () => {
+      return MeianConnection.status === 'connected'
+    },
+    isConnecting: () => {
+      return MeianConnection.status === 'connecting'
+    },
+    isAuthenticating: () => {
+      return MeianConnection.status === 'authenticating'
+    },
+    isPending: () => {
+      return MeianConnection.status === 'pending'
+    },
+    isDisconnected: () => {
+      return MeianConnection.status === 'disconnected'
+    },
+    updateStatus: function (currentStatus) {
+      if (currentStatus) {
+        MeianConnection.status = currentStatus
+      }
+    }
   }
 
   /**
@@ -87,35 +135,28 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
 
     // list container
     const lists = {}
-    const socketTimeout = 10000
-    // client status
-    let socketStatus = 'disconnected'
-
-    const socket = new net.Socket()
-    socket.setTimeout(socketTimeout)
 
     /**
-   * append the command to the tcp socket
+   * preapare the message to send
    * @param {*} command
    * @param {*} currentArgs
    */
-    function _writeCommand (command, currentArgs) {
+    function createMessage (command, currentArgs) {
       if (!currentArgs) {
         currentArgs = []
       } else if (!Array.isArray(currentArgs)) {
         currentArgs = [currentArgs]
       }
       const msg = MeianMessageFunctions[command](...currentArgs)
-      if (msg.socketStatus) {
-        socketStatus = msg.socketStatus
-      }
+      // update current connection status
+      MeianConnection.updateStatus(msg.socketStatus)
       return msg
     }
 
     self.disconnect = function () {
-      if (socketStatus !== 'disconnected' || socket.connecting || socket.pending) {
-        logger.log('debug', `${promiseId}: requested disconnection from ${host}:${port} ${socket.connecting ? '(connecting)' : ''} ${socket.pending ? '(pending)' : ''}`)
-        socket.destroy()
+      if (!MeianConnection.isDisconnected() || MeianConnection.isConnecting() || MeianConnection.isPending()) {
+        logger.log('debug', `${promiseId}: requested disconnection from ${host}:${port} ${MeianConnection.socket.connecting ? '(connecting)' : ''} ${MeianConnection.socket.pending ? '(pending)' : ''}`)
+        MeianConnection.disconnect()
       }
     }
 
@@ -124,44 +165,51 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
    * @returns
    */
     self.connect = function () {
-      socketStatus = 'connecting'
+      // update current connection status
+      MeianConnection.updateStatus('connecting')
+
       return new Promise((resolve, reject) => {
         logger.log('debug', `${promiseId}: connecting to ${host}:${port}`)
 
         // handle tcp timeout
-        socket.on('timeout', (e) => {
+        MeianConnection.socket.on('timeout', (e) => {
           logger.error(`${promiseId} tcp socket timeout`)
-          socket.destroy()
+          MeianConnection.disconnect()
           reject(new Error(`${promiseId} tcp socket timeout`))
         })
         // handle errors
-        socket.on('error', function (error) {
+        MeianConnection.socket.on('error', function (error) {
           logger.error(`${promiseId}: error ${error && error.message}`)
           reject(error)
         })
 
-        socket.on('connect', () => {
-          socketStatus = 'connected'
+        MeianConnection.socket.on('connect', () => {
+          // update current connection status
+          MeianConnection.updateStatus('connected')
           logger.log('debug', `${promiseId}: connected to ${host}:${port}`)
         })
 
         // handle connection closed by other side
-        socket.on('close', function (hadError) {
-          socketStatus = 'disconnected'
+        MeianConnection.socket.on('close', function (hadError) {
+          // update current connection status
+          MeianConnection.updateStatus('disconnected')
           logger.log('debug', `${promiseId}: connection closed on ${host}:${port} ${hadError ? 'with error' : ''}`)
         })
 
-        socket.on('end', () => {
-          socketStatus = 'disconnected'
+        MeianConnection.socket.on('end', () => {
+          // update current connection status
+          MeianConnection.updateStatus('disconnected')
           logger.log('debug', `${promiseId}: disconnected from ${host}:${port}`)
         })
 
         // 1) connect and send login data
-        socket.connect(port, host, function () {
+        MeianConnection.socket.connect(port, host, function () {
           logger.log('debug', `${promiseId}: logging in to ${host}:${port}`)
 
           const loginMsg = MeianMessageFunctions.Client(uid, pwd)
-          socketStatus = loginMsg.socketStatus
+
+          // update current connection status (connecting)
+          MeianConnection.updateStatus(loginMsg.socketStatus)
 
           // 2) Send the login request
           self.sendMessage(loginMsg, { command: 'Client' }).then((loginResponse) => {
@@ -180,26 +228,28 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
    * @param {*} commandArgs
    * @returns
    */
-    self.sendCommands = function () {
+    self.sendCommands = async function () {
       const promiseData = {}
-      // 3) send protocol messages in sequence
-      return commandNames.reduce(
-        (p, currentCommand, currentIndex) => {
-          const prom = p.then(_ => {
-            const currentArgs = commandArgs && commandArgs[currentIndex]
-            const msg = _writeCommand(currentCommand, currentArgs)
-            return self.sendMessage(
-              msg,
-              {
-                command: currentCommand,
-                args: currentArgs
-              },
-              promiseData)
-          })
-          return prom
-        },
-        Promise.resolve()
-      )
+
+      for (let currentIndex = 0; currentIndex < commandNames.length; currentIndex++) {
+        const currentCommand = commandNames[currentIndex]
+
+        // 3) send protocol messages in sequence
+        const currentArgs = commandArgs && commandArgs[currentIndex]
+        // prepare the message
+        const msg = createMessage(currentCommand, currentArgs)
+        // wait for response
+        const response = await self.sendMessage(msg,
+          {
+            command: currentCommand,
+            args: currentArgs
+          },
+          promiseData)
+
+        logger.log('debug', `${currentCommand} (args ${JSON.stringify((commandArgs && commandArgs[currentIndex]) || 'n/a')}) responded with a json sized ${JSON.stringify(response).length} chars`)
+      }
+
+      return promiseData
     }
 
     /**
@@ -211,12 +261,10 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
       const commandPrettyName = `${promiseId}-${command}${args ? '(' + JSON.stringify(args) + ')' : ''}`
 
       logger.log('debug', `${commandPrettyName}: sending command`)
-      if (!promiseData) {
-        promiseData = {}
-      }
-      if (!promiseData.data) {
-        promiseData.data = {}
-      }
+
+      promiseData = promiseData || {}
+      promiseData.data = promiseData.data || {}
+
       // Prepare an empty storage for the list/raw that will be used by all the events with different offsets
       if (msg.isList && (!msg.offset || msg.offset === 0 || !lists[command])) {
         lists[command] = {}
@@ -224,11 +272,11 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
       const message = msg.message
 
       // remove previous response listener
-      socket.removeAllListeners('data')
+      MeianConnection.socket.removeAllListeners('data')
 
       return new Promise((resolve, reject) => {
       // 3a)command data resolved
-        socket.on('data', function (buffer) {
+        MeianConnection.socket.on('data', function (buffer) {
           logger.log('debug', `${commandPrettyName}: received buffer with length ${buffer.length}`)
           let cmdName = ''
           try {
@@ -257,8 +305,9 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
               const event = constants.events[cmdName] || // custom command
                             cmdName || // host command (GetZone, GetByWay)
                             constants.events.default // response;
-              if (socketStatus === 'autenticating') {
-                socketStatus = 'connected'
+              if (MeianConnection.isAuthenticating()) {
+                // update current connection status (connecting)
+                MeianConnection.updateStatus('connected')
               }
 
               // requested something but received another response...yes it happens, most of the time the response is a push notification "Alarm" command
@@ -293,7 +342,7 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
                   done = true
                 } else {
                 // call the same command with different offset
-                  const msg = _writeCommand(cmdName, newOffset)
+                  const msg = createMessage(cmdName, newOffset)
                   // promise for list retrieval
                   self.sendMessage(
                     msg,
@@ -325,7 +374,7 @@ function MeianSocket (host, port, uid, pwd, logLevel) {
           }
         })
 
-        socket.write(message)
+        MeianConnection.socket.write(message)
       })
     }
 

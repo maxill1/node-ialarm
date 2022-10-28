@@ -35,7 +35,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
     return zones
   }
 
-  function executeCommand (commands, args, listCallMax) {
+  async function executeCommand (commands, args, listCallMax) {
     requestRunning++
     let delay = (requestRunning * concurrentDelay) || 0
     // reset delay or instant commands

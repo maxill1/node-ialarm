@@ -126,7 +126,7 @@ module.exports.MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      socketStatus: 'autenticating',
+      socketStatus: 'authenticating',
       message: _prepareMessage('/Root/Pair/Client', cmd)
     }
   },
