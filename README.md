@@ -221,3 +221,6 @@ bypass/remove bypass of a zone, then return the status exposed by getStatusAlarm
 
 #### filterStatusZones(zones)
 will filter zones with relevant event (zone alarm, bypass, errors, etc). The input must be an array of zones emitted with **getStatusAlarm**
+
+## Security concern
+Some of this Alarm don't need to "login" with username or password to actually accept messages, Just "Pair" with the push client and you will be able to send and read data (including arm/disarm/bypass).

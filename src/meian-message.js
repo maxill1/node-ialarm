@@ -126,8 +126,23 @@ module.exports.MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      socketStatus: 'authenticating',
       message: _prepareMessage('/Root/Pair/Client', cmd)
+    }
+  },
+  /**
+   * Push subscribe
+   * @param {*} uid
+   * @param {*} pwd
+   * @returns
+   */
+  Push: function (uid) {
+    const cmd = {}
+    cmd.Id = types.STR(uid)
+    cmd.Err = null
+    // request
+    return {
+      seq: 0,
+      message: _prepareMessage('/Root/Pair/Push', cmd)
     }
   },
   /**

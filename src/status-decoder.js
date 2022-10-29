@@ -1,26 +1,26 @@
 
 module.exports = function () {
   const statusTcp = {
-    0: 'ARMED_AWAY',
-    1: 'DISARMED',
-    2: 'ARMED_HOME', // ARMED_STAY
-    3: 'CANCEL', // CLEAR
-    4: 'TRIGGERED' // fake status, alarm is not reporting this. It's triggered when one of the zones reports "alarm"
+    0: ['ARMED_AWAY', 'armAway', 'armedAway'],
+    1: ['DISARMED', 'disarm', 'disarmed'],
+    2: ['ARMED_HOME', 'armHome', 'armedHome'], // ARMED_STAY
+    3: ['CANCEL', 'cancel'], // CLEAR
+    4: ['TRIGGERED', 'triggered', 'trigger'] // fake status, alarm is not reporting this. It's triggered when one of the zones reports "alarm"
   }
 
   const _fromValue = function (value, list) {
-    const st = list[value]
-    if (!list[value]) {
-      // console.log("Unknown status for "+value);
-      throw new Error('unknown status')
+    const statuses = list[value]
+    if (statuses && statuses[0]) {
+      // always first value, since this is an alias
+      return statuses[0]
     }
-    // console.log("Found status :" + st + "("+value+")");
-    return st
+    throw new Error('unknown status')
   }
 
   const _fromStatus = function (st, list) {
     for (const value in list) {
-      if (list[value] === st) {
+      const statuses = list[value]
+      if (statuses.includes(st)) {
         return value
       }
     }
@@ -32,22 +32,64 @@ module.exports = function () {
   }
 
   /**
+   *  Alarm is triggered if armed and one of the zones is alarmed, or if any state but a 24 hours zone (type=5) is alarmed
+   */
+  this.getTriggeredArea = function (zones, GetAlarmStatus) {
+    const triggered = []
+    const armed = []
+
+    // GetArea/GetAlarmStatus
+    if ((typeof GetAlarmStatus === 'string' || !GetAlarmStatus.status_1)) {
+      if (this.isArmed(GetAlarmStatus)) {
+        armed.push('status_1')
+      }
+    } else {
+      // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+      Object.keys(GetAlarmStatus).forEach(statusArea => {
+        const areaStatus = GetAlarmStatus[statusArea]
+        if (areaStatus && this.isArmed(areaStatus)) {
+          armed.push(statusArea)
+        }
+      })
+    }
+
+    // zone triggered with alarm or 24 hour type (5)
+    if (zones) {
+      zones.forEach(z => {
+        // triggered zone
+        if (z.alarm) {
+          // TODO H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+          if (z.typeId === 5) {
+            triggered.push({
+              zone: z,
+              area: 'status_1'
+            })
+          } else {
+            // search for any armed area
+            armed.forEach(area => {
+              // TODO ask someone with GetArea to check if GetByWay exposes any param that correlate an area to a the zone, for now the are all related to area 1
+              if (area === 'status_1') {
+                triggered.push({
+                  zone: z,
+                  area: area
+                })
+              }
+            })
+          }
+        }
+      })
+    }
+    return triggered
+  }
+
+  /**
    * Alarm is triggered if armed and one of the zones is alarmed, or if any state but a 24 hours zone (type=5) is alarmed
    * @param {*} zones
    * @param {*} alarmStatus
    * @returns
    */
-  this.isTriggered = function (zones, alarmStatus) {
-    // zone triggered with alarm or 24 hour type (5)
-    if (zones) {
-      const zonesTriggered = zones.filter(z => z.alarm && (this.isArmed(alarmStatus) || z.typeId === 5))
-      if (zonesTriggered && zonesTriggered.length > 0) {
-        // const errors = zonesTriggered.map(a => a.id + ' ' + a.name)
-        // console.log(`Alarm is ${alarmStatus} and triggered by zones: ${JSON.stringify(errors)}`)
-        return true
-      }
-    }
-    return false
+  this.isTriggered = function (zones, GetAlarmStatus) {
+    return this.getTriggeredArea(zones, GetAlarmStatus).length > 0
   }
 
   this.fromTcpValueToStatus = function (value) {

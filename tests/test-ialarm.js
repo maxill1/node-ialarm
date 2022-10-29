@@ -22,25 +22,27 @@ if (!username || !password) {
 } else {
   console.log('will test meianClient on ' + host + ':' + port)
 
-  function testLibrary (functionName, arg1, arg2) {
-    const alarm = new MeianClient(host, port, username, password, undefined, logLevel, 200)
-    alarm[functionName](arg1, arg2).then(function (response) {
+  async function testLibrary (functionName, arg1, arg2) {
+    const alarm = new MeianClient(host, port, username, password, undefined, logLevel, 2500)
+    try {
+      const response = await alarm[functionName](arg1, arg2)
       console.log('response: ' + JSON.stringify(response))
-    }).catch(function (error) {
+    } catch (error) {
       console.log('Error: ', error)
-    })
+    }
   }
   // implemented
   // testLibrary('getNet')
-  testLibrary('getLastEvents')
-  testLibrary('getEvents')
+  // testLibrary('getLastEvents')
+  // testLibrary('getEvents')
   testLibrary('getStatusAlarm')
-  testLibrary('getStatusArea')
-  testLibrary('getFullStatus')
-  testLibrary('getZoneStatus')
-  testLibrary('getZoneInfo')
-  testLibrary('bypassZone', 2, true)
-  testLibrary('bypassZone', 2, false)
+  // testLibrary('getStatusArea')
+  // testLibrary('getZoneStatus')
+  // testLibrary('getFullStatus')
+  // testLibrary('getZoneInfo')
+  // testLibrary('getZoneInfo', 14)
+  // testLibrary('bypassZone', 2, true)
+  // testLibrary('bypassZone', 2, false)
   // testLibrary('armAway')
   // testLibrary('armHome')
   // testLibrary('armHome', 3)

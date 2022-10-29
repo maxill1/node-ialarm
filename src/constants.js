@@ -1,17 +1,13 @@
 
 module.exports = {
-
-  maxZones: 128,
-
-  /**
-     * Events emitted on tcp command response
-     */
-  events: {
-    default: 'response'
-    // GetZone: 'allZones',
-    // GetZone: 'GetZone',
-    // GetAlarmStatus: 'GetAlarmStatus',
-    // TODO status, events, command zoneInfo zoneInfoError
+  promiseTimeout: 2000,
+  socketTimeout: 60000,
+  listLimit: {
+    GetLog: 512,
+    GetArea: 128,
+    GetByWay: 128,
+    GetZone: 128,
+    default: 128
   },
 
   cid: {

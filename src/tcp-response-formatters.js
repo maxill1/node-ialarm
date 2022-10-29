@@ -35,34 +35,41 @@ module.exports = function () {
   /**
      * When multiple messages are neede to get a full list, this function will handle the parsing and push
      */
-  const _parseListableData = function (listName, current, container, lineParser) {
-    // creating raw array and formatted list
-    if (!container.raw) {
-      container.raw = []
-    }
-    container.raw.push(current)
-
-    if (!container[listName]) {
-      container[listName] = []
+  const _parseListableData = function (listName, list, lineParser) {
+    if (!Array.isArray(list)) {
+      list = [list]
     }
 
-    const linesTotal = this.cleanData(current.Ln.value)
-    const offset = this.cleanData(current.Offset.value)
+    const container = {
+      // current formatted list
+      [listName]: [],
+      // raw data
+      raw: list
+    }
 
-    for (let queryIndex = 0; queryIndex < linesTotal; queryIndex++) {
-      // L0, L1, L2
-      const lineKey = 'L' + queryIndex
-      const element = current[lineKey]
-      if (!element) {
-        // L1, Lx may not exit on last call
-        continue
+    list.forEach(current => {
+      current = current || {}
+      const linesTotal = this.cleanData(current.Ln?.value) || 0
+      const offset = this.cleanData(current.Offset?.value) || 0
+
+      for (let queryIndex = 0; queryIndex < linesTotal; queryIndex++) {
+        // L0, L1, L2
+        const lineKey = 'L' + queryIndex
+        const element = current[lineKey]
+        if (!element) {
+          // L1, Lx may not exit on last call
+          continue
+        }
+        const elementIndex = offset + queryIndex
+        // index build using offset and L0,L1,L2
+        element.index = elementIndex
+        // extract L0, L1, etc and add them to the list in the container
+        _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset)
       }
-      const elementIndex = offset + queryIndex
-      // index build using offset and L0,L1,L2
-      element.index = elementIndex
-      // extract L0, L1, etc and add them to the list in the container
-      _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset)
-    }
+    })
+
+    // formatted data
+    return container
   }
 
   /**
@@ -193,8 +200,8 @@ module.exports = function () {
    * @param {*} container
    * @returns
    */
-  this.GetArea = function (current, container) {
-    _parseListableData('areas', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
+  this.GetArea = function (list) {
+    const container = _parseListableData('areas', list, function (lineValue, key, lineNumber, lineTotal, offset) {
       const line = {}
       // if (!lineValue) {
       //   console.log('no lineValue')
@@ -208,12 +215,16 @@ module.exports = function () {
     return container
   }
 
-  this.GetByWay = function (current, container) {
+  this.GetByWay = function (list) {
     // console.log("Formatting GetByWay response");
 
     const lastChecked = new Date()
 
-    _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
+    const container = _parseListableData('zones', list, function (lineValue, key, lineNumber, lineTotal, offset) {
+      if (!lineValue || !lineValue.value) {
+        console.log(JSON.stringify(lineValue))
+        console.log(JSON.stringify(list))
+      }
       const status = this.cleanData(lineValue.value)
       const normalizedIndex = lineValue.index
 
@@ -242,10 +253,8 @@ module.exports = function () {
   /**
      * Get zone info
      */
-  this.GetZone = function (current, container) {
-    // console.log("Formatting GetZone response");
-
-    _parseListableData('zones', current, container, function (lineValue, key, lineNumber, lineTotal, offset) {
+  this.GetZone = function (list) {
+    const container = _parseListableData('zones', list, function (lineValue, key, lineNumber, lineTotal, offset) {
       const line = {}
       // if (!lineValue) {
       //   console.log('no lineValue')
@@ -260,14 +269,13 @@ module.exports = function () {
       line.voiceName = constants.ZoneVoices[line.voiceId]
       return line
     })
-
     return container
   }
 
   /**
      * List of events recorded in the alarm (arm, disarm, bypass, alert, etc)
      */
-  this.GetLog = function (current, container) {
+  this.GetLog = function (list) {
     // console.log("Formatting GetLog response");
     /*
         raw format
@@ -280,7 +288,7 @@ module.exports = function () {
         date:"2020-11-25 21:28:09"
         message:"Zona Bypass"
         zone:"1" */
-    _parseListableData('logs', current, container, function (lineValue) {
+    const container = _parseListableData('logs', list, function (lineValue) {
       const line = {}
       line.date = this.cleanData(lineValue.Time.value)
       line.zone = this.cleanData(lineValue.Area.value)
@@ -349,6 +357,30 @@ module.exports = function () {
       </Alarm>
     </Host>
   </Root>
+  {
+  "Root": {
+      "Host": {
+        "Alarm": {
+          "Cid": {
+            "value": "STR,4|3441"
+          },
+          "Content": {
+            "value": "GBA,32|53697374656D61205061727A69616C65"
+          },
+          "Err": {},
+          "Time": {
+            "value": "DTA|2022.10.31.18.40.11"
+          },
+          "Zone": {
+            "value": "S32,0,41|70"
+          },
+          "ZoneName": {
+            "value": "GBA,16|"
+          }
+        }
+      }
+    }
+  }
   */
   this.Alarm = function (data) {
     const event = data.Cid && this.cleanData(data.Cid.value)
@@ -363,5 +395,8 @@ module.exports = function () {
     }
   }
 
+  /*
+
+ */
   return this
 }
