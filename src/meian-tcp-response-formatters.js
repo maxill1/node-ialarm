@@ -17,6 +17,18 @@ const S32 = /S32,(\d+),(\d+)\|(\d*)/
 const STR = /STR,(\d+)\|(.*)/
 const TYP = /TYP,(\w+)\|(\d+)/
 
+const getHostData = function (response, hostType) {
+  const content = response?.Root?.Host || {}
+  const commandName = Object.keys(content)[0]
+  return content[commandName]
+}
+
+const getPairData = function (response, hostType) {
+  const content = response?.Root?.Pair || {}
+  const commandName = Object.keys(content)[0]
+  return content[commandName]
+}
+
 /**
    * get index from a line node (L0, L1, L2, L3, etc)
    * @param {*} key
@@ -42,13 +54,11 @@ const _parseListableData = function (listName, list, lineParser) {
 
   const container = {
     // current formatted list
-    [listName]: [],
-    // raw data
-    raw: list
+    [listName]: []
   }
 
-  list.forEach(current => {
-    current = current || {}
+  list.forEach(root => {
+    const current = getHostData(root) || {}
     const linesTotal = MeianTCPResponseFormatter.cleanData(current.Ln?.value) || 0
     const offset = MeianTCPResponseFormatter.cleanData(current.Offset?.value) || 0
 
@@ -61,10 +71,10 @@ const _parseListableData = function (listName, list, lineParser) {
         continue
       }
       const elementIndex = offset + queryIndex
-      // index build using offset and L0,L1,L2
-      element.index = elementIndex
+
       // extract L0, L1, etc and add them to the list in the container
-      _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset)
+      _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset,
+        elementIndex) // index build using offset and L0,L1,L2
     }
   })
 
@@ -79,11 +89,11 @@ const _parseListableData = function (listName, list, lineParser) {
    * @param {*} data the response object
    * @param {*} listName the name of the list containing lines (events, logs, etc)
    */
-const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push, linesTotal, offset) {
+const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push, linesTotal, offset, elementIndex) {
   // L0, L1, etc
   const lineNumber = _getLineNumber(key)
   if (lineNumber !== null && rowFormatter) {
-    const row = rowFormatter(value, key, lineNumber, linesTotal, offset)
+    const row = rowFormatter(value, key, lineNumber, linesTotal, offset, elementIndex)
     if (!data[listName]) {
       data[listName] = []
     }
@@ -92,6 +102,27 @@ const _listBasedFormatter = function (key, value, data, listName, rowFormatter, 
     } else {
       data[listName][lineNumber] = row
     }
+  }
+}
+
+function parseData (response, parser, listName, hostType) {
+  if (!Array.isArray(response)) {
+    response = [response]
+  }
+
+  let first = getHostData(response[0], hostType)
+  if (!first) {
+    first = getPairData(response[0], hostType)
+  }
+  const linesTotal = MeianTCPResponseFormatter.cleanData(first.Ln?.value) || 0
+  // list
+  if (linesTotal > 0) {
+    return _parseListableData(listName || 'list', response, parser)
+  } else if (parser) {
+    // single command
+    return parser(first)
+  } else {
+    return first
   }
 }
 
@@ -121,7 +152,7 @@ const MeianTCPResponseFormatter = {
       case 'DTA': {
         // 2020.06.04.18.40.03
         const dta = DTA.exec(input)[2].split('.')
-        value = new Date(Date.UTC(dta[0], dta[1], dta[2], dta[3], dta[4], dta[5]))
+        value = new Date(Date.UTC(dta[0], parseInt(dta[1]) - 1, dta[2], dta[3], dta[4], dta[5])).toISOString()
         break
       }
       case 'ERR':
@@ -185,18 +216,24 @@ const MeianTCPResponseFormatter = {
     return value
   },
 
-  GetAlarmStatus: function (data) {
-    // console.log("Formatting GetAlarmStatus response");
-    const status = data.DevStatus.value
-    const exec = TYP.exec(status)
-    return MeianStatusDecoder.fromTcpValueToStatus(exec[2])
+  default: function (response) {
+    return parseData(response)
   },
 
-  SetAlarmStatus: function (data) {
-    // console.log("Formatting GetAlarmStatus response");
-    const status = data.DevStatus.value
-    const exec = TYP.exec(status)
-    return MeianStatusDecoder.fromTcpValueToStatus(exec[2])
+  GetAlarmStatus: function (response) {
+    return parseData(response, (hostData) => {
+      const status = hostData.DevStatus.value
+      const exec = TYP.exec(status)
+      return MeianStatusDecoder.fromTcpValueToStatus(exec[2])
+    })
+  },
+
+  SetAlarmStatus: function (response) {
+    return parseData(response, (hostData) => {
+      const status = hostData.DevStatus.value
+      const exec = TYP.exec(status)
+      return MeianStatusDecoder.fromTcpValueToStatus(exec[2])
+    })
   },
 
   /**
@@ -205,67 +242,56 @@ const MeianTCPResponseFormatter = {
    * @param {*} container
    * @returns
    */
-  GetArea: function (list) {
-    const container = _parseListableData('areas', list, function (lineValue, key, lineNumber, lineTotal, offset) {
+  GetArea: function (response) {
+    return parseData(response, function (lineValue, key, lineNumber, lineTotal, offset, elementIndex) {
       const line = {}
       // if (!lineValue) {
       //   console.log('no lineValue')
       // }
       // line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
-      line.id = (lineValue.index + 1) // base 1
+      line.id = (elementIndex + 1) // base 1
       line.area = line.id
       line.status = MeianTCPResponseFormatter.cleanData(lineValue.Status.value)
       return line
-    })
-    return container
+    },
+    'areas')
   },
 
-  GetByWay: function (list) {
-    // console.log("Formatting GetByWay response");
-
-    const lastChecked = new Date()
-
-    const container = _parseListableData('zones', list, function (lineValue, key, lineNumber, lineTotal, offset) {
+  GetByWay: function (response) {
+    return parseData(response, function (lineValue, key, lineNumber, lineTotal, offset, elementIndex) {
       if (!lineValue || !lineValue.value) {
         console.log(JSON.stringify(lineValue))
-        console.log(JSON.stringify(list))
       }
       const status = MeianTCPResponseFormatter.cleanData(lineValue.value)
-      const normalizedIndex = lineValue.index
 
       const booleansAndMessage = MeianStatusDecoder.getZoneStatus(status)
       const zone = {
-        lastChecked,
-        id: normalizedIndex + 1,
+        id: elementIndex + 1,
         name: key,
         status,
         ...booleansAndMessage
       }
 
       return zone
-    })
-
-    return container
+    }, 'zones')
   },
 
-  SetByWay: function (data) {
-    return {
-      zone: MeianTCPResponseFormatter.cleanData(data.Pos.value),
-      bypass: MeianTCPResponseFormatter.cleanData(data.En.value) === 'T'
-    }
+  SetByWay: function (response) {
+    return parseData(response, (hostData) => {
+      return {
+        zone: MeianTCPResponseFormatter.cleanData(hostData.Pos.value),
+        bypass: MeianTCPResponseFormatter.cleanData(hostData.En.value) === 'T'
+      }
+    })
   },
 
   /**
      * Get zone info
      */
-  GetZone: function (list) {
-    const container = _parseListableData('zones', list, function (lineValue, key, lineNumber, lineTotal, offset) {
+  GetZone: function (response) {
+    return parseData(response, function (lineValue, key, lineNumber, lineTotal, offset, elementIndex) {
       const line = {}
-      // if (!lineValue) {
-      //   console.log('no lineValue')
-      // }
-      // line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
-      line.id = (lineValue.index + 1) // base 1
+      line.id = (elementIndex + 1) // base 1
       line.zone = line.id
       line.name = MeianTCPResponseFormatter.cleanData(lineValue.Name.value)
       line.typeId = MeianTCPResponseFormatter.cleanData(lineValue.Type.value)
@@ -273,78 +299,66 @@ const MeianTCPResponseFormatter = {
       line.voiceId = MeianTCPResponseFormatter.cleanData(lineValue.Voice.value)
       line.voiceName = MeianConstants.ZoneVoices[line.voiceId]
       return line
-    })
-    return container
+    },
+    'zones')
   },
 
   /**
      * List of events recorded in the alarm (arm, disarm, bypass, alert, etc)
      */
-  GetLog: function (list) {
-    // console.log("Formatting GetLog response");
-    /*
-        raw format
-        "L1": { "Time": { "value": "DTA,19|2020.06.04.18.35.15" },
-                "Area": { "value": "S32,1,40|16" },
-                 "Event": { "value": "STR,4|1133" } }
-        */
-    /*
-        scraper format
-        date:"2020-11-25 21:28:09"
-        message:"Zona Bypass"
-        zone:"1" */
-    const container = _parseListableData('logs', list, function (lineValue) {
+  GetLog: function (response) {
+    return parseData(response, function (lineValue, key, lineNumber, lineTotal, offset, elementIndex) {
       const line = {}
       line.date = MeianTCPResponseFormatter.cleanData(lineValue.Time.value)
       line.zone = MeianTCPResponseFormatter.cleanData(lineValue.Area.value)
       const event = MeianTCPResponseFormatter.cleanData(lineValue.Event.value)
       line.message = MeianConstants.cid[event] || event
       return line
-    })
-
-    return container
+    },
+    'logs')
   },
 
   /**
-     * Network config and alarm name
-     * @param {*} data
-     * @returns
-     */
-  GetNet: function (data) {
-    // console.log("Formatting GetEvents response");
-    const network = {}
-    for (const key in data) {
-      const element = data[key]
-      const prop = key.toLowerCase()
-      if (element.value) {
-        const value = MeianTCPResponseFormatter.cleanData(element.value)
-        network[prop] = value && value.trim && value.trim()
-      } else {
-        network[prop] = ''
+   * Network config and alarm name
+   * @param {*} data
+   * @returns
+   */
+  GetNet: function (response) {
+    return parseData(response, (hostData) => {
+      const network = {}
+      for (const key in hostData) {
+        const element = hostData[key]
+        const prop = key.toLowerCase()
+        if (element.value) {
+          const value = MeianTCPResponseFormatter.cleanData(element.value)
+          network[prop] = value && value.trim && value.trim()
+        } else {
+          network[prop] = ''
+        }
       }
-    }
-    return network
+      return network
+    })
   },
 
   /*
-     * Not sure about what this means. They seem to be some CID decoded string
-     */
-  GetEvents: function (data) {
-    // console.log("Formatting GetEvents response");
-    const response = {
-      events: [],
-      raw: data
-    }
-    for (const key in data) {
-      const element = data[key]
-      if (element.value) {
-        const value = MeianTCPResponseFormatter.cleanData(element.value)
-        _listBasedFormatter(key, value, response, 'events', function (lineValue) {
-          return MeianConstants.cid[lineValue]
-        })
+    * Not sure about what this means. They seem to be some CID decoded string
+    */
+  GetEvents: function (response) {
+    return parseData(response, (hostData) => {
+      const response = {
+        events: []
       }
-    }
-    return response
+      for (const key in hostData) {
+        const element = hostData[key]
+        if (element.value) {
+          const value = MeianTCPResponseFormatter.cleanData(element.value)
+          _listBasedFormatter(key, value, response, 'events', function (lineValue) {
+            return MeianConstants.cid[lineValue]
+          })
+        }
+      }
+      return response
+    })
   },
 
   /*
@@ -387,17 +401,21 @@ const MeianTCPResponseFormatter = {
     }
   }
   */
-  Alarm: function (data) {
-    const event = data.Cid && MeianTCPResponseFormatter.cleanData(data.Cid.value)
-    return {
-      cid: MeianConstants.cid[event] || event,
-      content: data.Content && MeianTCPResponseFormatter.cleanData(data.Content.value),
-      time: data.Time && MeianTCPResponseFormatter.cleanData(data.Time.value),
-      zone: data.Zone && MeianTCPResponseFormatter.cleanData(data.Zone.value),
-      zoneName: data.ZoneName && MeianTCPResponseFormatter.cleanData(data.ZoneName.value),
-      name: data.Name && MeianTCPResponseFormatter.cleanData(data.Name.value)
+  Alarm: function (response) {
+    return parseData(response, function (hostData) {
+      const event = hostData.Cid && MeianTCPResponseFormatter.cleanData(hostData.Cid.value)
+      return {
+        cid: MeianConstants.cid[event] || event,
+        content: hostData.Content && MeianTCPResponseFormatter.cleanData(hostData.Content.value),
+        time: hostData.Time && MeianTCPResponseFormatter.cleanData(hostData.Time.value),
+        zone: hostData.Zone && MeianTCPResponseFormatter.cleanData(hostData.Zone.value),
+        zoneName: hostData.ZoneName && MeianTCPResponseFormatter.cleanData(hostData.ZoneName.value),
+        name: hostData.Name && MeianTCPResponseFormatter.cleanData(hostData.Name.value)
 
-    }
+      }
+    },
+    undefined,
+    'Alarm')
   }
 
 }

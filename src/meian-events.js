@@ -32,7 +32,7 @@ const MeianEvents = {
    */
   disconnected: (type, data) => {
     MeianEvents.events.emit('disconnected', !type ? 'app requested disconnection' : type, data)
-    MeianEvents.events.clear()
+    MeianEvents.clear()
   },
 
   /**

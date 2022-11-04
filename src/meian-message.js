@@ -113,32 +113,55 @@ export const MeianMessage = {
     const decryptedMessageBytes = decryptEncrypt(encryptedMessage)
     const message = toString(decryptedMessageBytes)
     return message
-  }
-
-}
-
-/**
- * Convert to XML the data, encrypt the message
- */
-function _prepareMessage (root, cmd, sequence) {
-  const paths = root.split('/')
-  const data = {}
-  let lastIteratedObj = data
-  for (let i = 1; i < paths.length; i++) {
-    const key = paths[i]
-    lastIteratedObj[key] = {}
-    if (i === paths.length - 1) {
-      lastIteratedObj[key] = cmd
+  },
+  toXml: function (cmd, rootPath) {
+    // eventually adds /Root/Host/CommandName
+    let data = {}
+    if (rootPath) {
+      const paths = rootPath.split('/')
+      let lastIteratedObj = data
+      for (let i = 1; i < paths.length; i++) {
+        const key = paths[i]
+        lastIteratedObj[key] = {}
+        if (i === paths.length - 1) {
+          lastIteratedObj[key] = cmd
+        }
+        lastIteratedObj = lastIteratedObj[key]
+      }
+    } else {
+      data = cmd
     }
-    lastIteratedObj = lastIteratedObj[key]
+    const xml = convert.js2xml(data, { compact: true, fullTagEmptyElement: true, spaces: 0, textKey: 'value' })
+    return xml
+  },
+  toJson: function (xml) {
+    // cleanup <Err>ERR|00</Err> at root
+    let Err
+    if (xml.indexOf('<Err>ERR') === 0) {
+      const error = xml.substring(0, xml.indexOf('</Err>') + 6)
+      xml = xml.replace(error, '')
+      Err = convert.xml2js(error, { compact: true, textKey: 'value' })
+    }
+    const data = convert.xml2js(xml, { compact: true, textKey: 'value' })
+    // apply <Err>ERR|00</Err> at root
+    if (Err) {
+      data.Err = Err.Err.value
+    }
+    return data
+  },
+  /**
+   * Convert to XML the data, encrypt the message
+   */
+  prepareMessage: function (root, cmd, sequence) {
+    const xml = MeianMessage.toXml(cmd, root)
+    // console.log('Requesting XML ' + xml);
+
+    const msg = MeianMessage.createMessage(xml, sequence || 1, true)
+    // console.log('Requesting RAW ' + msg);
+
+    return msg
   }
-  const xml = convert.js2xml(data, { compact: true, fullTagEmptyElement: true, spaces: 0 })
-  // console.log('Requesting XML ' + xml);
 
-  const msg = MeianMessage.createMessage(xml, sequence || 1, true)
-  // console.log('Requesting RAW ' + msg);
-
-  return msg
 }
 
 export const MeianMessageFunctions = {
@@ -162,7 +185,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Pair/Client', cmd)
+      message: MeianMessage.prepareMessage('/Root/Pair/Client', cmd)
     }
   },
   /**
@@ -178,7 +201,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Pair/Push', cmd)
+      message: MeianMessage.prepareMessage('/Root/Pair/Push', cmd)
     }
   },
   /**
@@ -191,7 +214,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Host/GetAlarmStatus', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/GetAlarmStatus', cmd)
     }
   },
 
@@ -220,7 +243,7 @@ export const MeianMessageFunctions = {
       seq: 0,
       offset,
       isList: true,
-      message: _prepareMessage('/Root/Host/GetArea', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/GetArea', cmd)
     }
   },
 
@@ -247,7 +270,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Host/SetArea', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/SetArea', cmd)
     }
   },
 
@@ -267,7 +290,7 @@ export const MeianMessageFunctions = {
       seq: 0,
       offset,
       isList: true,
-      message: _prepareMessage('/Root/Host/GetByWay', cmd, offset)
+      message: MeianMessage.prepareMessage('/Root/Host/GetByWay', cmd, offset)
     }
   },
 
@@ -289,7 +312,7 @@ export const MeianMessageFunctions = {
       seq: 0,
       offset,
       isList: true,
-      message: _prepareMessage('/Root/Host/GetZone', cmd, offset)
+      message: MeianMessage.prepareMessage('/Root/Host/GetZone', cmd, offset)
     }
   },
 
@@ -310,7 +333,7 @@ export const MeianMessageFunctions = {
       seq: 0,
       offset,
       isList: true,
-      message: _prepareMessage('/Root/Host/GetLog', cmd, offset)
+      message: MeianMessage.prepareMessage('/Root/Host/GetLog', cmd, offset)
     }
   },
 
@@ -331,7 +354,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Host/GetNet', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/GetNet', cmd)
     }
   },
 
@@ -346,7 +369,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Host/SetAlarmStatus', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/SetAlarmStatus', cmd)
     }
   },
 
@@ -363,7 +386,7 @@ export const MeianMessageFunctions = {
     // request
     return {
       seq: 0,
-      message: _prepareMessage('/Root/Host/SetByWay', cmd)
+      message: MeianMessage.prepareMessage('/Root/Host/SetByWay', cmd)
     }
   }
 
@@ -382,7 +405,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetEvents', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetEvents', cmd)
   //     };
   // },
 
@@ -395,7 +418,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetGprs', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetGprs', cmd)
   //     };
   // },
 
@@ -411,7 +434,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetDefense', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetDefense', cmd)
   //     };
   // },
 
@@ -427,7 +450,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetEmail', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetEmail', cmd)
   //     };
   // },
 
@@ -443,7 +466,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetOverlapZone', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetOverlapZone', cmd)
   //     };
   // },
 
@@ -457,7 +480,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetPairServ', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetPairServ', cmd)
   //     };
   // },
 
@@ -475,7 +498,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetPhone', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetPhone', cmd)
   //     };
   // },
 
@@ -494,7 +517,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRemote', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetRemote', cmd, offset)
   //     };
   // },
 
@@ -512,7 +535,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRfid', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetRfid', cmd, offset)
   //     };
   // },
 
@@ -530,7 +553,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRfidType', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetRfidType', cmd, offset)
   //     };
   // },
 
@@ -545,7 +568,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetSendby', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetSendby', cmd)
   //     };
   // },
 
@@ -565,7 +588,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSensor', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetSensor', cmd, offset)
   //     };
   // },
 
@@ -581,7 +604,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetServ', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetServ', cmd)
   //     };
   // },
 
@@ -599,7 +622,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSwitch', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetSwitch', cmd, offset)
   //     };
   // },
 
@@ -617,7 +640,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSwitchInfo', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetSwitchInfo', cmd, offset)
   //     };
   // },
 
@@ -642,7 +665,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetSys', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetSys', cmd)
   //     };
   // },
 
@@ -663,7 +686,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetTel', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetTel', cmd, offset)
   //     };
   // },
 
@@ -678,7 +701,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetTime', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetTime', cmd)
   //     };
   // },
 
@@ -696,7 +719,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetVoiceType', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetVoiceType', cmd, offset)
   //     };
   // },
 
@@ -714,7 +737,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetZoneType', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetZoneType', cmd, offset)
   //     };
   // },
 
@@ -727,7 +750,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetDefense', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetDefense', cmd)
   //     };
   // },
 
@@ -743,7 +766,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetEmail', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetEmail', cmd)
   //     };
   // },
 
@@ -756,7 +779,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetGprs', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetGprs', cmd)
   //     };
   // },
 
@@ -773,7 +796,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetNet', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetNet', cmd)
   //     };
   // },
 
@@ -787,7 +810,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetOverlapZone', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetOverlapZone', cmd)
   //     };
   // },
 
@@ -801,7 +824,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetPairServ', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetPairServ', cmd)
   //     };
   // },
 
@@ -814,7 +837,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetPhone', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetPhone', cmd)
   //     };
   // },
 
@@ -828,7 +851,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetRfid', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetRfid', cmd)
   //     };
   // },
 
@@ -840,7 +863,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetRemote', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetRemote', cmd)
   //     };
   // },
 
@@ -855,7 +878,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSendby', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetSendby', cmd)
   //     };
   // },
 
@@ -867,7 +890,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSensor', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetSensor', cmd)
   //     };
   // },
 
@@ -883,7 +906,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetServ', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetServ', cmd)
   //     };
   // },
 
@@ -895,7 +918,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSwitch', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetSwitch', cmd)
   //     };
   // },
 
@@ -909,7 +932,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSwitchInfo', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetSwitchInfo', cmd)
   //     };
   // },
 
@@ -931,7 +954,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSys', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetSys', cmd)
   //     };
   // },
 
@@ -945,7 +968,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetTel', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetTel', cmd)
   //     };
   // },
 
@@ -960,7 +983,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetTime', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetTime', cmd)
   //     };
   // },
 
@@ -975,7 +998,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetZone', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SetZone', cmd)
   //     };
   // },
 
@@ -985,7 +1008,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/WlsStudy', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/WlsStudy', cmd)
   //     };
   // },
 
@@ -995,7 +1018,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/ConfigWlWaring', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/ConfigWlWaring', cmd)
   //     };
   // },
 
@@ -1006,7 +1029,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/FskStudy', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/FskStudy', cmd)
   //     };
   // },
 
@@ -1020,7 +1043,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetWlsStatus', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetWlsStatus', cmd)
   //     };
   // },
 
@@ -1031,7 +1054,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/DelWlsDev', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/DelWlsDev', cmd)
   //     };
   // },
 
@@ -1044,7 +1067,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/WlsSave', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/WlsSave', cmd)
   //     };
   // },
 
@@ -1063,7 +1086,7 @@ export const MeianMessageFunctions = {
   //         seq: 0,
   //         offset: offset,
   //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetWlsList', cmd, offset)
+  //         message: MeianMessage.prepareMessage('/Root/Host/GetWlsList', cmd, offset)
   //     };
   // },
 
@@ -1073,7 +1096,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SwScan', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/SwScan', cmd)
   //     };
   // },
 
@@ -1085,7 +1108,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/OpSwitch', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/OpSwitch', cmd)
   //     };
   // },
 
@@ -1101,7 +1124,7 @@ export const MeianMessageFunctions = {
   //     //request
   //     return {
   //         //isList: true,
-  //         message: _prepareMessage('/Root/Host/Reset', cmd)
+  //         message: MeianMessage.prepareMessage('/Root/Host/Reset', cmd)
   //     };
   // }
 

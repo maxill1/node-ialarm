@@ -19,6 +19,7 @@ You have to provide 5 arguments:
 - password
 
 ```javascript
+import MeianClient from 'ialarm'
 const iAlarm = require('ialarm'); 
 const alarm = new iAlarm("192.168.1.81", "18034", "myAdmin", "myPassword", [1,2,5,10,15]);
 
@@ -112,7 +113,6 @@ returns a promise with with the current status of zones
 {
     "zones": [
         {
-            "lastChecked": "2021-10-09T06:45:52.770Z", //last checked 
             "id": 1, //zone number
             "zone": 1, //same as id
             "name": "Ingresso", //zone friendly name
@@ -143,7 +143,6 @@ returns a promise with with the current status and an array of zone statuses
     "status": "ARMED_HOME", // ARMED_AWAY,ARMED_HOME,DISARMED,CANCEL,TRIGGERED
     "zones": [
         {
-            "lastChecked": "2021-10-09T06:45:52.770Z", //last checked 
             "id": 1, //zone number
             "zone": 1, //same as id
             "name": "Ingresso", //zone friendly name

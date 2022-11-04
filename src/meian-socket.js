@@ -1,4 +1,3 @@
-import convert from 'xml-js'
 import { MeianConnection, ConnectionStatus } from './meian-connection.js'
 import MeianEvents from './meian-events.js'
 import { MeianMessage, MeianMessageFunctions } from './meian-message.js'
@@ -118,11 +117,24 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
       commandArgs,
       connectionId: MeianConnection.connectionName,
       transactionId,
-      date: new Date().getTime()
+      date: new Date().getTime(),
+      payloads: {
+        encrypted: { },
+        xml: { },
+        rawData: { },
+        data: { }
+      }
     }
 
     for (let currentIndex = 0; currentIndex < commandNames.length; currentIndex++) {
       const currentCommand = commandNames[currentIndex]
+      // container
+      commandData.payloads.encrypted[currentCommand] = []
+      commandData.payloads.xml[currentCommand] = []
+      commandData.payloads.rawData[currentCommand] = []
+
+      // data formatters
+      const formatter = MeianTCPResponseFormatter[currentCommand] || MeianTCPResponseFormatter.default
 
       // 3) send protocol messages in sequence
       const currentArgs = commandArgs && commandArgs[currentIndex]
@@ -134,76 +146,72 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
       // send
       const response = await sendMessage(msg, { command: currentCommand, args: currentArgs, commandIndex: currentIndex }, transactionId)
 
-      // will be overridden later if necessary
-      let formattedResponse = response
-
-      // data formatters
-      const formatter = MeianTCPResponseFormatter[currentCommand]
-
       if (response && !response.timeout && !response.error) {
-        logger.log('debug', `${logId} args ${JSON.stringify((commandArgs && commandArgs[currentIndex]) || 'n/a')}) responded with a json sized ${JSON.stringify(response).length} chars`)
+        logger.log('debug', `${logId} args ${JSON.stringify((commandArgs && commandArgs[currentIndex]) || 'n/a')}) responded with a xml sized ${JSON.stringify(response.xml).length} chars`)
+
+        // currrent response
+        commandData.payloads.encrypted[currentCommand].push(response?.encrypted)
+        commandData.payloads.xml[currentCommand].push(response?.xml)
+        commandData.payloads.rawData[currentCommand].push(response?.rawData)
 
         // list handler (multiple messages in chain)
-        const list = []
         if (msg.isList && response?.commandName === currentCommand) {
-          const responseRaw = response.Root.Host[currentCommand]
-          // first response of the list
-          list.push(responseRaw)
-
           // lets determine the size of the whole list
-          const total = MeianTCPResponseFormatter.cleanData(responseRaw.Total.value) || 0
-          const offset = MeianTCPResponseFormatter.cleanData(responseRaw.Offset.value)
-          const ln = MeianTCPResponseFormatter.cleanData(responseRaw.Ln.value) || 0
+          const hostData = response?.rawData?.Root?.Host[currentCommand]
+
+          const total = MeianTCPResponseFormatter.cleanData(hostData.Total.value) || 0
+          const offset = MeianTCPResponseFormatter.cleanData(hostData.Offset.value)
+          const ln = MeianTCPResponseFormatter.cleanData(hostData.Ln.value) || 0
 
           // es: GetZone has total = 40, ln = 2, offset = 0. We need to call the same command 20 times before getting all the Zones
           const cicles = Math.ceil(total / ln)
 
           const limit = getListLimit(currentCommand, listLimit)
 
-          for (let currentOffset = offset; currentOffset < cicles; currentOffset++) {
-            const newOffset = currentOffset * ln
+          // if forced args, no deep list iteration
+          if (!currentArgs || (Array.isArray(currentArgs) && currentArgs.length === 0)) {
+            for (let currentOffset = offset; currentOffset < cicles; currentOffset++) {
+              const newOffset = currentOffset * ln
 
-            // first offset is already done
-            if (currentOffset === 0) {
-              logger.log('debug', `${logId}: responded with Ln, Total and Offset: it's a list. Done offset ${currentOffset + 1}/${cicles}. We are populating remaining ${total - ln}/${total} items (with limit at ${limit})`)
-              continue
+              // first offset is already done
+              if (currentOffset === 0) {
+                logger.log('debug', `${logId}: responded with Ln, Total and Offset: it's a list. Done offset ${currentOffset + 1}/${cicles}. We are populating remaining ${total - ln}/${total} items (with limit at ${limit})`)
+                continue
+              }
+
+              // max calls size (es. GetLog is 512 items and every call has 2 item... 256 calls may take more than 30 sec)
+              if ((total > (limit - 1) && (newOffset / 2) > (limit - 1)) ||
+                // the offset is outside the total
+                newOffset >= total) {
+                // list is complete
+                break
+              }
+
+              // call the same command with different offset
+              const msg = createMessage(currentCommand, newOffset)
+              // promise for list retrieval
+              // eslint-disable-next-line no-unused-vars
+              const listItemResponse = await sendMessage(msg, { command: currentCommand, args: newOffset, commandIndex: msg.currentIndex }, transactionId)
+              if (listItemResponse.error) {
+                logger.log('error', `${logId}: querying ${currentCommand} ${currentOffset + 1}/${cicles}. We are populating items ${newOffset}-${newOffset + ln > total ? total : newOffset + ln} of ${total} total list (with limit at ${limit}). Responded with an error: ${listItemResponse.error}`)
+              } else {
+                logger.log('debug', `${logId}: querying ${currentCommand} ${currentOffset + 1}/${cicles}. We are populating items ${newOffset}-${newOffset + ln > total ? total : newOffset + ln} of ${total} total list (with limit at ${limit}). Responded with an xml sized ${JSON.stringify(listItemResponse.xml).length} chars`)
+                // add encrypted, rawData, xml, json
+                commandData.payloads.rawData[currentCommand].push(listItemResponse.rawData)
+                commandData.payloads.xml[currentCommand].push(listItemResponse.xml)
+                commandData.payloads.encrypted[currentCommand].push(listItemResponse.encrypted)
+              }
             }
-
-            // max calls size (es. GetLog is 512 items and every call has 2 item... 256 calls may take more than 30 sec)
-            if ((total > (limit - 1) && (newOffset / 2) > (limit - 1)) ||
-              // the offset is outside the total
-              newOffset >= total) {
-              // list is complete
-              break
-            }
-
-            // call the same command with different offset
-            const msg = createMessage(currentCommand, newOffset)
-            // promise for list retrieval
-            // eslint-disable-next-line no-unused-vars
-            const listResponseRaw = await sendMessage(msg, { command: currentCommand, args: newOffset, commandIndex: msg.currentIndex }, transactionId)
-            if (listResponseRaw.error) {
-              logger.log('error', `${logId}: querying ${currentCommand} ${currentOffset + 1}/${cicles}. We are populating items ${newOffset}-${newOffset + ln > total ? total : newOffset + ln} of ${total} total list (with limit at ${limit}). Responded with an error: ${listResponseRaw.error}`)
-            } else {
-              logger.log('debug', `${logId}: querying ${currentCommand} ${currentOffset + 1}/${cicles}. We are populating items ${newOffset}-${newOffset + ln > total ? total : newOffset + ln} of ${total} total list (with limit at ${limit}). Responded with a json sized ${JSON.stringify(responseRaw).length} chars`)
-              // first response of the list
-              list.push(listResponseRaw.Root.Host[currentCommand])
-            }
-          }
-
-          if (formatter) {
-            formattedResponse = formatter(list)
           }
         }
-      }
 
-      const hostData = response?.Root?.Host[currentCommand]
-      if (formatter && hostData && !response.error) {
-        formattedResponse = formatter(hostData)
+        // ok response
+        // add formatted data to command response
+        commandData.payloads.data[currentCommand] = formatter(commandData.payloads.rawData[currentCommand])
+      } else {
+        // ko response without formatter
+        commandData.payloads.data[currentCommand] = response
       }
-
-      // add partial command to command response
-      commandData[currentCommand] = formattedResponse
     }
 
     return commandData
@@ -283,27 +291,17 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
           logger.warning(`${transactionToString()} - No buffer received from Alarm`)
           MeianEvents.error('Received empty response from Alarm')
         }
-        const raw = String.fromCharCode.apply(null, buffer)
-        if (!raw) {
-          // no raw/bad raw??
+        const encrypted = String.fromCharCode.apply(null, buffer)
+        if (!encrypted) {
+          // no encrypted/bad encrypted??
           logger.warning(`${transactionToString()} - No raw decoded from buffer with length ${(buffer && buffer.length) || 0}`)
           MeianEvents.error('Received bad buffer from Alarm')
         }
-        let xml = MeianMessage.extractMessage(raw)
-        // cleanup <Err>ERR|00</Err> at root
-        let Err
-        if (xml.indexOf('<Err>ERR') === 0) {
-          const error = xml.substring(0, xml.indexOf('</Err>') + 6)
-          xml = xml.replace(error, '')
-          Err = convert.xml2js(error, { compact: true, textKey: 'value' })
-        }
-        const data = convert.xml2js(xml, { compact: true, textKey: 'value' })
-        // apply <Err>ERR|00</Err> at root
-        if (Err) {
-          data.Err = Err.Err.value
-        }
+        const xml = MeianMessage.extractMessage(encrypted)
+        // json
+        const json = MeianMessage.toJson(xml)
 
-        const command = getCmdName(data)
+        const command = getCmdName(json)
         // we presume this is the transaction id for this command
         const { transactionId, commandIndex, args } = MeianConnection.getTransaction(command)
 
@@ -315,27 +313,29 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
         updateStatus(ConnectionStatus.CONNECTED_READY, transactionId, command, commandIndex, args)
 
         // TODO check errors
-        if (data.Err && data.Err !== 'ERR|00') {
-          MeianEvents.error(`Alarm responded with Error ${JSON.stringify(data.Err)}`)
+        if (json.Err && json.Err !== 'ERR|00') {
+          MeianEvents.error(`Alarm responded with Error ${JSON.stringify(json.Err)}`)
         } else {
-          if (!data) {
+          if (!json) {
             // no data??
-            logger.warning(`${commandPrettyName}: command sent but no valid data received - command received ${command}, data: ${JSON.stringify(data)}`)
+            logger.warning(`${commandPrettyName}: command sent but no valid data received - command received ${command}, data: ${JSON.stringify(json)}`)
           }
 
           // requested something but received another response...yes it happens, most of the time the response is a push notification "Alarm" command
           // using EventEmitter allows us to receive multiple response from one command and resolve only the correct one
           if (command === 'Alarm') {
             const formatter = MeianTCPResponseFormatter[command]
-            const alarmContent = formatter(data.Root.Host[command])
+            const alarmContent = formatter(json)
             logger.warning(`${commandPrettyName}: command sent but received an 'Alarm' push notification... ${alarmContent}`)
             MeianEvents.push({
               commandName: command, // name of the original command in response
               // debug data
               connectionId: MeianConnection.connectionName,
               transactionId,
-              raw: data,
-              ...alarmContent
+              encrypted,
+              xml,
+              rawData: json,
+              data: alarmContent
             })
           } else {
             MeianEvents.commandResponse(
@@ -345,8 +345,10 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
                 // debug data
                 connectionId: MeianConnection.connectionName,
                 transactionId,
+                encrypted,
+                xml,
                 // actual response
-                ...data
+                rawData: json
               })
           }
         }
