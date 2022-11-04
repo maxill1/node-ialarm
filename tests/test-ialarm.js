@@ -1,5 +1,5 @@
 
-const MeianClient = require('../ialarm')
+import { MeianClient } from '../index.js'
 
 const args = {}
 process.argv.slice(2).forEach(function (val) {

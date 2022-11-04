@@ -1,16 +1,15 @@
-
-const convert = require('xml-js')
-const { MeianConnection, ConnectionStatus } = require('./meian-connection')
-const { MeianMessage, MeianMessageFunctions } = require('./meian-message')
-const tcpResponseFormatters = require('./tcp-response-formatters')()
-const MeianEvents = require('./meian-events')
-const constants = require('./constants')
+import convert from 'xml-js'
+import { MeianConnection, ConnectionStatus } from './meian-connection.js'
+import MeianEvents from './meian-events.js'
+import { MeianMessage, MeianMessageFunctions } from './meian-message.js'
+import MeianConstants from './meian-constants.js'
+import MeianTCPResponseFormatter from './meian-tcp-response-formatters.js'
 
 function initListLimits (limit) {
   const num = parseInt(limit)
   if (num > 0) {
     return {
-      ...constants.listLimit,
+      ...MeianConstants.listLimit,
       GetByWay: num, // usually 128
       GetZone: num, // usually 128
       default: num // usually 128
@@ -18,7 +17,7 @@ function initListLimits (limit) {
   }
 
   return {
-    ...constants.listLimit,
+    ...MeianConstants.listLimit,
     ...(limit || {})
   }
 }
@@ -36,7 +35,7 @@ function getListLimit (commandName, limits) {
  * @param {*} logLevel
  * @returns
  */
-function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushClient) {
+export const MeianSocket = function (host, port, uid, pwd, logLevel, customListLimit, isPushClient) {
   const logger = MeianConnection.initLogger(logLevel)
 
   // default
@@ -118,7 +117,7 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
       commandNames,
       commandArgs,
       connectionId: MeianConnection.connectionName,
-      transactionId: transactionId,
+      transactionId,
       date: new Date().getTime()
     }
 
@@ -139,7 +138,7 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
       let formattedResponse = response
 
       // data formatters
-      const formatter = tcpResponseFormatters[currentCommand]
+      const formatter = MeianTCPResponseFormatter[currentCommand]
 
       if (response && !response.timeout && !response.error) {
         logger.log('debug', `${logId} args ${JSON.stringify((commandArgs && commandArgs[currentIndex]) || 'n/a')}) responded with a json sized ${JSON.stringify(response).length} chars`)
@@ -152,9 +151,9 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
           list.push(responseRaw)
 
           // lets determine the size of the whole list
-          const total = tcpResponseFormatters.cleanData(responseRaw.Total.value) || 0
-          const offset = tcpResponseFormatters.cleanData(responseRaw.Offset.value)
-          const ln = tcpResponseFormatters.cleanData(responseRaw.Ln.value) || 0
+          const total = MeianTCPResponseFormatter.cleanData(responseRaw.Total.value) || 0
+          const offset = MeianTCPResponseFormatter.cleanData(responseRaw.Offset.value)
+          const ln = MeianTCPResponseFormatter.cleanData(responseRaw.Ln.value) || 0
 
           // es: GetZone has total = 40, ln = 2, offset = 0. We need to call the same command 20 times before getting all the Zones
           const cicles = Math.ceil(total / ln)
@@ -290,7 +289,7 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
           logger.warning(`${transactionToString()} - No raw decoded from buffer with length ${(buffer && buffer.length) || 0}`)
           MeianEvents.error('Received bad buffer from Alarm')
         }
-        let xml = MeianMessage().extractMessage(raw)
+        let xml = MeianMessage.extractMessage(raw)
         // cleanup <Err>ERR|00</Err> at root
         let Err
         if (xml.indexOf('<Err>ERR') === 0) {
@@ -327,14 +326,14 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
           // requested something but received another response...yes it happens, most of the time the response is a push notification "Alarm" command
           // using EventEmitter allows us to receive multiple response from one command and resolve only the correct one
           if (command === 'Alarm') {
-            const formatter = tcpResponseFormatters[command]
+            const formatter = MeianTCPResponseFormatter[command]
             const alarmContent = formatter(data.Root.Host[command])
             logger.warning(`${commandPrettyName}: command sent but received an 'Alarm' push notification... ${alarmContent}`)
             MeianEvents.push({
               commandName: command, // name of the original command in response
               // debug data
               connectionId: MeianConnection.connectionName,
-              transactionId: transactionId,
+              transactionId,
               raw: data,
               ...alarmContent
             })
@@ -345,7 +344,7 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
                 commandName: command, // name of the original command in response
                 // debug data
                 connectionId: MeianConnection.connectionName,
-                transactionId: transactionId,
+                transactionId,
                 // actual response
                 ...data
               })
@@ -430,7 +429,7 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
         resolve(commandResponse)
       })
 
-      const promiseTimeout = constants.promiseTimeout
+      const promiseTimeout = MeianConstants.promiseTimeout
       const timeout = setTimeout(() => {
         resolve({
           timeout: promiseTimeout,
@@ -497,8 +496,8 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
     /**
      * connect to the server: 1) connect and 2) login
      */
-    connect: connect,
-    disconnect: disconnect,
+    connect,
+    disconnect,
     /**
      * Connect to the TCP socket and execute all the commands
      * @param {*} commandNames
@@ -549,5 +548,3 @@ function MeianSocket (host, port, uid, pwd, logLevel, customListLimit, isPushCli
     connection: MeianConnection
   }
 }
-
-module.exports = MeianSocket

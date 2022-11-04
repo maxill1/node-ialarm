@@ -1,5 +1,6 @@
-const net = require('net')
-const constants = require('./constants')
+import net from 'net'
+import MeianConstants from './meian-constants.js'
+import Meianlogger from './meian-logger.js'
 
 const transactionToString = (transactionId, command, commandIndex, args) => {
   if (!transactionId && command === 'Alarm') {
@@ -8,7 +9,7 @@ const transactionToString = (transactionId, command, commandIndex, args) => {
   return `con-${MeianConnection.connectionName}${transactionId ? '/' + transactionId : ''}${command ? '-comm-' + command : ''}${commandIndex ? '-index-' + commandIndex : ''}${args ? '(' + JSON.stringify(args) + ')' : ''}`
 }
 
-const ConnectionStatus = {
+export const ConnectionStatus = {
   DISCONNECTED: 0,
   CONNECTING: 1, // connection started but not yet received a response
   CONNECTED: 2, // connection started but not yet received a response
@@ -56,16 +57,16 @@ const ConnectionStatus = {
 /**
  * singleton instance of socket
  */
-const MeianConnection = {
+export const MeianConnection = {
   initLogger: (logLevel) => {
-    MeianConnection.logger = require('./logger')(logLevel)
+    MeianConnection.logger = Meianlogger(logLevel)
     return MeianConnection.logger
   },
   logger: undefined,
   socket: (function () {
     const s = new net.Socket()
     // socket timeout
-    s.setTimeout(constants.socketTimeout)
+    s.setTimeout(MeianConstants.socketTimeout)
     return s
   }()),
   // unique id for debug purposes
@@ -97,6 +98,3 @@ const MeianConnection = {
   },
   transactionToString
 }
-
-module.exports.MeianConnection = MeianConnection
-module.exports.ConnectionStatus = ConnectionStatus

@@ -1,53 +1,53 @@
+const statusTcp = {
+  0: ['ARMED_AWAY', 'armAway', 'armedAway'],
+  1: ['DISARMED', 'disarm', 'disarmed'],
+  2: ['ARMED_HOME', 'armHome', 'armedHome'], // ARMED_STAY
+  3: ['CANCEL', 'cancel'], // CLEAR
+  4: ['TRIGGERED', 'triggered', 'trigger'] // fake status, alarm is not reporting this. It's triggered when one of the zones reports "alarm"
+}
 
-module.exports = function () {
-  const statusTcp = {
-    0: ['ARMED_AWAY', 'armAway', 'armedAway'],
-    1: ['DISARMED', 'disarm', 'disarmed'],
-    2: ['ARMED_HOME', 'armHome', 'armedHome'], // ARMED_STAY
-    3: ['CANCEL', 'cancel'], // CLEAR
-    4: ['TRIGGERED', 'triggered', 'trigger'] // fake status, alarm is not reporting this. It's triggered when one of the zones reports "alarm"
+const _fromValue = function (value, list) {
+  const statuses = list[value]
+  if (statuses && statuses[0]) {
+    // always first value, since this is an alias
+    return statuses[0]
   }
+  throw new Error('unknown status')
+}
 
-  const _fromValue = function (value, list) {
+const _fromStatus = function (st, list) {
+  for (const value in list) {
     const statuses = list[value]
-    if (statuses && statuses[0]) {
-      // always first value, since this is an alias
-      return statuses[0]
+    if (statuses.includes(st)) {
+      return value
     }
-    throw new Error('unknown status')
   }
+  throw new Error('unknown status')
+}
 
-  const _fromStatus = function (st, list) {
-    for (const value in list) {
-      const statuses = list[value]
-      if (statuses.includes(st)) {
-        return value
-      }
-    }
-    throw new Error('unknown status')
-  }
+const MeianStatusDecoder = {
 
-  this.isArmed = function (statusValue) {
+  isArmed: function (statusValue) {
     return ['ARMED_HOME', 'ARMED_AWAY'].includes(statusValue)
-  }
+  },
 
   /**
    *  Alarm is triggered if armed and one of the zones is alarmed, or if any state but a 24 hours zone (type=5) is alarmed
    */
-  this.getTriggeredArea = function (zones, GetAlarmStatus) {
+  getTriggeredArea: function (zones, GetAlarmStatus) {
     const triggered = []
     const armed = []
 
     // GetArea/GetAlarmStatus
     if ((typeof GetAlarmStatus === 'string' || !GetAlarmStatus.status_1)) {
-      if (this.isArmed(GetAlarmStatus)) {
+      if (MeianStatusDecoder.isArmed(GetAlarmStatus)) {
         armed.push('status_1')
       }
     } else {
       // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
       Object.keys(GetAlarmStatus).forEach(statusArea => {
         const areaStatus = GetAlarmStatus[statusArea]
-        if (areaStatus && this.isArmed(areaStatus)) {
+        if (areaStatus && MeianStatusDecoder.isArmed(areaStatus)) {
           armed.push(statusArea)
         }
       })
@@ -71,7 +71,7 @@ module.exports = function () {
               if (area === 'status_1') {
                 triggered.push({
                   zone: z,
-                  area: area
+                  area
                 })
               }
             })
@@ -80,7 +80,7 @@ module.exports = function () {
       })
     }
     return triggered
-  }
+  },
 
   /**
    * Alarm is triggered if armed and one of the zones is alarmed, or if any state but a 24 hours zone (type=5) is alarmed
@@ -88,27 +88,27 @@ module.exports = function () {
    * @param {*} alarmStatus
    * @returns
    */
-  this.isTriggered = function (zones, GetAlarmStatus) {
-    return this.getTriggeredArea(zones, GetAlarmStatus).length > 0
-  }
+  isTriggered: function (zones, GetAlarmStatus) {
+    return MeianStatusDecoder.getTriggeredArea(zones, GetAlarmStatus).length > 0
+  },
 
-  this.fromTcpValueToStatus = function (value) {
+  fromTcpValueToStatus: function (value) {
     return _fromValue(value, statusTcp)
-  }
+  },
 
-  this.fromStatusToTcpValue = function (st) {
+  fromStatusToTcpValue: function (st) {
     return _fromStatus(st, statusTcp)
-  }
+  },
 
-  const ZONE_NOT_USED = 0
-  const ZONE_IN_USE = (1 << 0)
-  const ZONE_ALARM = (1 << 1)
-  const ZONE_BYPASS = (1 << 2)
-  const ZONE_FAULT = (1 << 3)
-  const ZONE_LOW_BATTERY = (1 << 4)
-  const ZONE_LOSS = (1 << 5)
+  getZoneStatus: function (zoneStatus) {
+    const ZONE_NOT_USED = 0
+    const ZONE_IN_USE = (1 << 0)
+    const ZONE_ALARM = (1 << 1)
+    const ZONE_BYPASS = (1 << 2)
+    const ZONE_FAULT = (1 << 3)
+    const ZONE_LOW_BATTERY = (1 << 4)
+    const ZONE_LOSS = (1 << 5)
 
-  this.getZoneStatus = function (zoneStatus) {
     const zone = {}
     zone.inUse = false
     zone.ok = true
@@ -208,5 +208,6 @@ module.exports = function () {
     }
     */
 
-  return this
 }
+
+export default MeianStatusDecoder

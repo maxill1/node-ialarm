@@ -1,57 +1,95 @@
+import convert from 'xml-js'
 
-const convert = require('xml-js')
-const MeianDataTypes = require('./meian-datatypes')
-const types = MeianDataTypes()
+const type = function (name, input) {
+  const size = input.length
+  return `${name},${size}|${input}`
+}
+
+export const MeianDataTypes = {
+  BOL: function (en) {
+    if (en) {
+      return 'BOL|T'
+    }
+    return 'BOL|F'
+  },
+  DTA: function (date) {
+    const dta = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}.${date.getHours()}.${date.getMinutes()}.${date.getSeconds()}`
+    const size = dta.length
+    return `DTA,${size}|${dta}`
+  },
+  PWD: function (pwd) {
+    return type('PWD', pwd)
+  },
+  S32: function (val, pos = 0, max) {
+    if (!max) {
+      max = pos
+    }
+    return `S32,${pos},${max}|${val}`
+  },
+  IPA: function (ip) {
+    return type('IPA', ip)
+  },
+  STR: function (text) {
+    return type('STR', text)
+  },
+  TYP: function (val, typ = []) {
+    try {
+      const t = typ[val]
+      return `TYP,${t}|${val}`
+    } catch (error) {
+      return `TYP,NONE,|${val}` % val
+    }
+  }
+}
+
+/**
+ * 128 bytes key as byte array
+ */
+const KEY = ((hexString) => {
+  const result = []
+  for (let i = 0; i < hexString.length; i += 2) {
+    result.push(parseInt(hexString.substr(i, 2), 16))
+  }
+  return result
+})('0c384e4e62382d620e384e4e44382d300f382b382b0c5a6234384e304e4c372b10535a0c20432d171142444e58422c421157322a204036172056446262382b5f0c384e4e62382d620e385858082e232c0f382b382b0c5a62343830304e2e362b10545a0c3e432e1711384e625824371c1157324220402c17204c444e624c2e12')
+
+const toString = function (bytes) {
+  let str = ''
+  for (let i = 0; i < bytes.length; i++) {
+    str += String.fromCharCode(bytes[i])
+  }
+  return str
+}
+
+const getBytes = function (str) {
+  const bytes = str.split('').map(function s (x) { return x.charCodeAt(0) })
+  return bytes
+}
+
+/**
+   * XOR encrypted/decrypted message with a 128 bytes key
+   */
+const decryptEncrypt = function (message) {
+  const bytes = getBytes(message)
+  // var str = toString(buf)
+  // console.log(str)
+  for (let i = 0; i < bytes.length; i++) {
+    const ki = i & 0x7f
+    bytes[i] = bytes[i] ^ KEY[ki]
+  }
+  return bytes
+}
 
 /**
  * Meian Message builder/parse based on this specs:
  * https://github.com/wildstray/meian-client/wiki
  */
-function MeianMessage () {
-  const self = this
 
-  /**
-       * 128 bytes key as byte array
-       */
-  const KEY = ((hexString) => {
-    const result = []
-    for (let i = 0; i < hexString.length; i += 2) {
-      result.push(parseInt(hexString.substr(i, 2), 16))
-    }
-    return result
-  })('0c384e4e62382d620e384e4e44382d300f382b382b0c5a6234384e304e4c372b10535a0c20432d171142444e58422c421157322a204036172056446262382b5f0c384e4e62382d620e385858082e232c0f382b382b0c5a62343830304e2e362b10545a0c3e432e1711384e625824371c1157324220402c17204c444e624c2e12')
-
-  const toString = function (bytes) {
-    let str = ''
-    for (let i = 0; i < bytes.length; i++) {
-      str += String.fromCharCode(bytes[i])
-    }
-    return str
-  }
-
-  const getBytes = function (str) {
-    const bytes = str.split('').map(function s (x) { return x.charCodeAt(0) })
-    return bytes
-  }
-
-  /**
-     * XOR encrypted/decrypted message with a 128 bytes key
-     */
-  const decryptEncrypt = function (message) {
-    const bytes = getBytes(message)
-    // var str = toString(buf)
-    // console.log(str)
-    for (let i = 0; i < bytes.length; i++) {
-      const ki = i & 0x7f
-      bytes[i] = bytes[i] ^ KEY[ki]
-    }
-    return bytes
-  }
-
+export const MeianMessage = {
   /**
      * Encrypt and build a message
      */
-  self.createMessage = function (xml, sequence, isRequest) {
+  createMessage: function (xml, sequence, isRequest) {
     if (!sequence) {
       sequence = 1
     }
@@ -64,12 +102,12 @@ function MeianMessage () {
     const msgEnding = !isRequest ? msgSize : '0000' // Last four bytes are size of encrypted data for request, 0000 or -001 for response
     const msg = `${msgType}${msgSize}${msgSeq}${msgFiller}${encryptedMessage}${msgEnding}`
     return msg
-  }
+  },
 
   /**
      * Encrypt and build a message
      */
-  self.extractMessage = function (data) {
+  extractMessage: function (data) {
     // remove head (msg type, size and filler) and tail (msg size or -0001)
     const encryptedMessage = data.substring(0, data.length - 4).substring(16)
     const decryptedMessageBytes = decryptEncrypt(encryptedMessage)
@@ -77,10 +115,7 @@ function MeianMessage () {
     return message
   }
 
-  return self
 }
-
-module.exports.MeianMessage = MeianMessage
 
 /**
  * Convert to XML the data, encrypt the message
@@ -100,24 +135,25 @@ function _prepareMessage (root, cmd, sequence) {
   const xml = convert.js2xml(data, { compact: true, fullTagEmptyElement: true, spaces: 0 })
   // console.log('Requesting XML ' + xml);
 
-  const msg = MeianMessage().createMessage(xml, sequence || 1, true)
+  const msg = MeianMessage.createMessage(xml, sequence || 1, true)
   // console.log('Requesting RAW ' + msg);
 
   return msg
 }
 
-module.exports.MeianMessageFunctions = {
+export const MeianMessageFunctions = {
   /**
      * Login
      */
   Client: function (uid, pwd) {
     const cmd = {}
-    cmd.Id = types.STR(uid)
-    cmd.Pwd = types.PWD(pwd)
+    cmd.Id = MeianDataTypes.STR(uid)
+    cmd.Pwd = MeianDataTypes.PWD(pwd)
     cmd.Type = 'TYP,ANDROID|0'
-    cmd.Token = types.STR(function () {
+    cmd.Token = MeianDataTypes.STR(function () {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0; const v = c == 'x' ? r : (r & 0x3 | 0x8)
+        const r = Math.random() * 16 | 0
+        const v = (c === 'x') ? r : (r & 0x3 | 0x8)
         return v.toString(16)
       })
     }())
@@ -137,7 +173,7 @@ module.exports.MeianMessageFunctions = {
    */
   Push: function (uid) {
     const cmd = {}
-    cmd.Id = types.STR(uid)
+    cmd.Id = MeianDataTypes.STR(uid)
     cmd.Err = null
     // request
     return {
@@ -176,13 +212,13 @@ module.exports.MeianMessageFunctions = {
     offset = offset || 0
     const cmd = {}
     cmd.Total = null
-    cmd.Offset = types.S32(offset)
+    cmd.Offset = MeianDataTypes.S32(offset)
     cmd.Ln = null
     cmd.Err = null
     // request
     return {
       seq: 0,
-      offset: offset,
+      offset,
       isList: true,
       message: _prepareMessage('/Root/Host/GetArea', cmd)
     }
@@ -205,8 +241,8 @@ module.exports.MeianMessageFunctions = {
     numArea = numArea || 0
     // 0,1,2
     const cmd = {}
-    cmd.Pos = types.S32(numArea, 0, 3) // max 4 aree
-    cmd.Status = types.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
+    cmd.Pos = MeianDataTypes.S32(numArea, 0, 3) // max 4 aree
+    cmd.Status = MeianDataTypes.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
     cmd.Err = null
     // request
     return {
@@ -223,13 +259,13 @@ module.exports.MeianMessageFunctions = {
 
     const cmd = {}
     cmd.Total = null
-    cmd.Offset = types.S32(offset)
+    cmd.Offset = MeianDataTypes.S32(offset)
     cmd.Ln = null
     cmd.Err = null
     // request
     return {
       seq: 0,
-      offset: offset,
+      offset,
       isList: true,
       message: _prepareMessage('/Root/Host/GetByWay', cmd, offset)
     }
@@ -244,14 +280,14 @@ module.exports.MeianMessageFunctions = {
 
     const cmd = {}
     cmd.Total = null
-    cmd.Offset = types.S32(offset || 0)
+    cmd.Offset = MeianDataTypes.S32(offset || 0)
     cmd.Ln = null
     cmd.Err = null
 
     // request
     return {
       seq: 0,
-      offset: offset,
+      offset,
       isList: true,
       message: _prepareMessage('/Root/Host/GetZone', cmd, offset)
     }
@@ -265,14 +301,14 @@ module.exports.MeianMessageFunctions = {
     offset = offset || 0
     const cmd = {}
     cmd.Total = null
-    cmd.Offset = types.S32(offset || 0)
+    cmd.Offset = MeianDataTypes.S32(offset || 0)
     cmd.Ln = null
     cmd.Err = null
 
     // request
     return {
       seq: 0,
-      offset: offset,
+      offset,
       isList: true,
       message: _prepareMessage('/Root/Host/GetLog', cmd, offset)
     }
@@ -305,7 +341,7 @@ module.exports.MeianMessageFunctions = {
   SetAlarmStatus: function (status) {
     // 0,1,2
     const cmd = {}
-    cmd.DevStatus = types.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
+    cmd.DevStatus = MeianDataTypes.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
     cmd.Err = null
     // request
     return {
@@ -321,8 +357,8 @@ module.exports.MeianMessageFunctions = {
      */
   SetByWay: function (pos, en) {
     const cmd = {}
-    cmd.Pos = types.S32(pos, 1)
-    cmd.En = types.BOL(en)
+    cmd.Pos = MeianDataTypes.S32(pos, 1)
+    cmd.En = MeianDataTypes.BOL(en)
     cmd.Err = null
     // request
     return {
@@ -340,7 +376,7 @@ module.exports.MeianMessageFunctions = {
   // GetEvents: function () {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
+  //     cmd['Offset'] = MeianDataTypes.S32(0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -369,7 +405,7 @@ module.exports.MeianMessageFunctions = {
   // GetDefense: function () {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
+  //     cmd['Offset'] = MeianDataTypes.S32(0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -401,7 +437,7 @@ module.exports.MeianMessageFunctions = {
   // GetOverlapZone: function () {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32();
+  //     cmd['Offset'] = MeianDataTypes.S32();
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -432,7 +468,7 @@ module.exports.MeianMessageFunctions = {
   // GetPhone: function () {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
+  //     cmd['Offset'] = MeianDataTypes.S32(0);
   //     cmd['Ln'] = null;
   //     cmd['RepeatCnt'] = null;
   //     cmd['Err'] = null;
@@ -450,7 +486,7 @@ module.exports.MeianMessageFunctions = {
   // GetRemote: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -468,7 +504,7 @@ module.exports.MeianMessageFunctions = {
   // GetRfid: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -486,7 +522,7 @@ module.exports.MeianMessageFunctions = {
   // GetRfidType: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -500,7 +536,7 @@ module.exports.MeianMessageFunctions = {
 
   // GetSendby: function (cid) {
   //     var cmd = {};
-  //     cmd['Cid'] = types.STR(cid);
+  //     cmd['Cid'] = MeianDataTypes.STR(cid);
   //     cmd['Tel'] = null;
   //     cmd['Voice'] = null;
   //     cmd['Sms'] = null;
@@ -521,7 +557,7 @@ module.exports.MeianMessageFunctions = {
   // GetSensor: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -555,7 +591,7 @@ module.exports.MeianMessageFunctions = {
   // GetSwitch: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -573,7 +609,7 @@ module.exports.MeianMessageFunctions = {
   // GetSwitchInfo: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -619,7 +655,7 @@ module.exports.MeianMessageFunctions = {
   //     cmd['Code'] = null;
   //     cmd['Cnt'] = null;
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -652,7 +688,7 @@ module.exports.MeianMessageFunctions = {
   // GetVoiceType: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -670,7 +706,7 @@ module.exports.MeianMessageFunctions = {
   // GetZoneType: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -684,9 +720,9 @@ module.exports.MeianMessageFunctions = {
 
   // SetDefense: function (pos, hmdef = '00:00', hmundef = '00:00') {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Def'] = types.STR(hmdef);
-  //     cmd['Undef'] = types.STR(hmundef);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Def'] = MeianDataTypes.STR(hmdef);
+  //     cmd['Undef'] = MeianDataTypes.STR(hmundef);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -697,12 +733,12 @@ module.exports.MeianMessageFunctions = {
 
   // SetEmail: function (ip, port, user, pwd, emailsend, emailrecv) {
   //     var cmd = {};
-  //     cmd['Ip'] = types.STR(ip);
-  //     cmd['Port'] = types.S32(port);
-  //     cmd['User'] = types.STR(user);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['EmailSend'] = types.STR(emailsend);
-  //     cmd['EmailRecv'] = types.STR(emailrecv);
+  //     cmd['Ip'] = MeianDataTypes.STR(ip);
+  //     cmd['Port'] = MeianDataTypes.S32(port);
+  //     cmd['User'] = MeianDataTypes.STR(user);
+  //     cmd['Pwd'] = MeianDataTypes.PWD(pwd);
+  //     cmd['EmailSend'] = MeianDataTypes.STR(emailsend);
+  //     cmd['EmailRecv'] = MeianDataTypes.STR(emailrecv);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -713,9 +749,9 @@ module.exports.MeianMessageFunctions = {
 
   // SetGprs: function (apn, user, pwd) {
   //     var cmd = {};
-  //     cmd['Apn'] = types.STR(apn);
-  //     cmd['User'] = types.STR(user);
-  //     cmd['Pwd'] = types.PWD(pwd);
+  //     cmd['Apn'] = MeianDataTypes.STR(apn);
+  //     cmd['User'] = MeianDataTypes.STR(user);
+  //     cmd['Pwd'] = MeianDataTypes.PWD(pwd);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -726,13 +762,13 @@ module.exports.MeianMessageFunctions = {
 
   // SetNet: function (mac, name, ip, gate, subnet, dns1, dns2) {
   //     var cmd = {};
-  //     cmd['Mac'] = types.MAC(mac);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Ip'] = types.IPA(ip);
-  //     cmd['Gate'] = types.IPA(gate);
-  //     cmd['Subnet'] = types.IPA(subnet);
-  //     cmd['Dns1'] = types.IPA(dns1);
-  //     cmd['Dns2'] = types.IPA(dns2);
+  //     cmd['Mac'] = MeianDataTypes.MAC(mac);
+  //     cmd['Name'] = MeianDataTypes.STR(name);
+  //     cmd['Ip'] = MeianDataTypes.IPA(ip);
+  //     cmd['Gate'] = MeianDataTypes.IPA(gate);
+  //     cmd['Subnet'] = MeianDataTypes.IPA(subnet);
+  //     cmd['Dns1'] = MeianDataTypes.IPA(dns1);
+  //     cmd['Dns2'] = MeianDataTypes.IPA(dns2);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -743,10 +779,10 @@ module.exports.MeianMessageFunctions = {
 
   // SetOverlapZone: function (pos, zone1, zone2, time) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Zone1'] = types.S32(zone1, 1);
-  //     cmd['Zone1'] = types.S32(zone2, 1);
-  //     cmd['Time'] = types.S32(time, 1);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Zone1'] = MeianDataTypes.S32(zone1, 1);
+  //     cmd['Zone1'] = MeianDataTypes.S32(zone2, 1);
+  //     cmd['Time'] = MeianDataTypes.S32(time, 1);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -757,10 +793,10 @@ module.exports.MeianMessageFunctions = {
 
   // SetPairServ: function (ip, port, uid, pwd) {
   //     var cmd = {};
-  //     cmd['Ip'] = types.IPA(ip);
-  //     cmd['Port'] = types.S32(port, 1);
-  //     cmd['Id'] = types.STR(uid);
-  //     cmd['Pwd'] = types.PWD(pwd);
+  //     cmd['Ip'] = MeianDataTypes.IPA(ip);
+  //     cmd['Port'] = MeianDataTypes.S32(port, 1);
+  //     cmd['Id'] = MeianDataTypes.STR(uid);
+  //     cmd['Pwd'] = MeianDataTypes.PWD(pwd);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -771,9 +807,9 @@ module.exports.MeianMessageFunctions = {
 
   // SetPhone: function (pos, num) {
   //     var cmd = {};
-  //     cmd['Type'] = types.TYP(1, ['F', 'L']);
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Num'] = types.STR(num);
+  //     cmd['Type'] = MeianDataTypes.TYP(1, ['F', 'L']);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Num'] = MeianDataTypes.STR(num);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -784,10 +820,10 @@ module.exports.MeianMessageFunctions = {
 
   // SetRfid: function (pos, code, typ, msg) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Type'] = types.S32(typ, ['NO', 'DS', 'HS', 'DM', 'HM', 'DC']);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Msg'] = types.STR(msg);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Type'] = MeianDataTypes.S32(typ, ['NO', 'DS', 'HS', 'DM', 'HM', 'DC']);
+  //     cmd['Code'] = MeianDataTypes.STR(code);
+  //     cmd['Msg'] = MeianDataTypes.STR(msg);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -798,8 +834,8 @@ module.exports.MeianMessageFunctions = {
 
   // SetRemote: function (pos, code) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Code'] = MeianDataTypes.STR(code);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -810,11 +846,11 @@ module.exports.MeianMessageFunctions = {
 
   // SetSendby: function (cid, tel, voice, sms, email) {
   //     var cmd = {};
-  //     cmd['Cid'] = types.STR(cid);
-  //     cmd['Tel'] = types.BOL(tel);
-  //     cmd['Voice'] = types.BOL(voice);
-  //     cmd['Sms'] = types.BOL(sms);
-  //     cmd['Email'] = types.BOL(email);
+  //     cmd['Cid'] = MeianDataTypes.STR(cid);
+  //     cmd['Tel'] = MeianDataTypes.BOL(tel);
+  //     cmd['Voice'] = MeianDataTypes.BOL(voice);
+  //     cmd['Sms'] = MeianDataTypes.BOL(sms);
+  //     cmd['Email'] = MeianDataTypes.BOL(email);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -825,8 +861,8 @@ module.exports.MeianMessageFunctions = {
 
   // SetSensor: function (pos, code) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Code'] = MeianDataTypes.STR(code);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -837,12 +873,12 @@ module.exports.MeianMessageFunctions = {
 
   // SetServ: function (en, ip, port, name, pwd, cnt) {
   //     var cmd = {};
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Ip'] = types.STR(ip);
-  //     cmd['Port'] = types.S32(port, 1);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['Cnt'] = types.S32(cnt, 1);
+  //     cmd['En'] = MeianDataTypes.BOL(en);
+  //     cmd['Ip'] = MeianDataTypes.STR(ip);
+  //     cmd['Port'] = MeianDataTypes.S32(port, 1);
+  //     cmd['Name'] = MeianDataTypes.STR(name);
+  //     cmd['Pwd'] = MeianDataTypes.PWD(pwd);
+  //     cmd['Cnt'] = MeianDataTypes.S32(cnt, 1);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -853,8 +889,8 @@ module.exports.MeianMessageFunctions = {
 
   // SetSwitch: function (pos, code) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Code'] = MeianDataTypes.STR(code);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -865,10 +901,10 @@ module.exports.MeianMessageFunctions = {
 
   // SetSwitchInfo: function (pos, name, hmopen = '00:00', hmclose = '00:00') {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Name'] = types.STR(name.substring(0, 7).encode('hex'));
-  //     cmd['Open'] = types.STR(hmopen);
-  //     cmd['Close'] = types.STR(hmclose);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Name'] = MeianDataTypes.STR(name.substring(0, 7).encode('hex'));
+  //     cmd['Open'] = MeianDataTypes.STR(hmopen);
+  //     cmd['Close'] = MeianDataTypes.STR(hmclose);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -879,18 +915,18 @@ module.exports.MeianMessageFunctions = {
 
   // SetSys: function (indelay, outdelay, alarmtime, wlloss, acloss, comloss, armvoice, armreport, forcearm, doorcheck, breakcheck, alarmlimit) {
   //     var cmd = {};
-  //     cmd['InDelay'] = types.S32(indelay, 1);
-  //     cmd['OutDelay'] = types.S32(outdelay, 1);
-  //     cmd['AlarmTime'] = types.S32(alarmtime, 1);
-  //     cmd['WlLoss'] = types.S32(wlloss, 1);
-  //     cmd['AcLoss'] = types.S32(acloss, 1);
-  //     cmd['ComLoss'] = types.S32(comloss, 1);
-  //     cmd['ArmVoice'] = types.BOL(armvoice);
-  //     cmd['ArmReport'] = types.BOL(armreport);
-  //     cmd['ForceArm'] = types.BOL(forcearm);
-  //     cmd['DoorCheck'] = types.BOL(doorcheck);
-  //     cmd['BreakCheck'] = types.BOL(breakcheck);
-  //     cmd['AlarmLimit'] = types.BOL(alarmlimit);
+  //     cmd['InDelay'] = MeianDataTypes.S32(indelay, 1);
+  //     cmd['OutDelay'] = MeianDataTypes.S32(outdelay, 1);
+  //     cmd['AlarmTime'] = MeianDataTypes.S32(alarmtime, 1);
+  //     cmd['WlLoss'] = MeianDataTypes.S32(wlloss, 1);
+  //     cmd['AcLoss'] = MeianDataTypes.S32(acloss, 1);
+  //     cmd['ComLoss'] = MeianDataTypes.S32(comloss, 1);
+  //     cmd['ArmVoice'] = MeianDataTypes.BOL(armvoice);
+  //     cmd['ArmReport'] = MeianDataTypes.BOL(armreport);
+  //     cmd['ForceArm'] = MeianDataTypes.BOL(forcearm);
+  //     cmd['DoorCheck'] = MeianDataTypes.BOL(doorcheck);
+  //     cmd['BreakCheck'] = MeianDataTypes.BOL(breakcheck);
+  //     cmd['AlarmLimit'] = MeianDataTypes.BOL(alarmlimit);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -901,10 +937,10 @@ module.exports.MeianMessageFunctions = {
 
   // SetTel: function (en, code, cnt) {
   //     var cmd = {};
-  //     cmd['Typ'] = types.TYP(0, ['F', 'L']);
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Code'] = types.NUM(code);
-  //     cmd['Cnt'] = types.S32(cnt, 1);
+  //     cmd['Typ'] = MeianDataTypes.TYP(0, ['F', 'L']);
+  //     cmd['En'] = MeianDataTypes.BOL(en);
+  //     cmd['Code'] = MeianDataTypes.NUM(code);
+  //     cmd['Cnt'] = MeianDataTypes.S32(cnt, 1);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -915,11 +951,11 @@ module.exports.MeianMessageFunctions = {
 
   // SetTime: function (en, name, typ, time, dst) {
   //     var cmd = {};
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Name'] = types.STR(name);
+  //     cmd['En'] = MeianDataTypes.BOL(en);
+  //     cmd['Name'] = MeianDataTypes.STR(name);
   //     cmd['Type'] = 'TYP,0|%d' % typ;
-  //     cmd['Time'] = types.DTA(time);
-  //     cmd['Dst'] = types.BOL(dst);
+  //     cmd['Time'] = MeianDataTypes.DTA(time);
+  //     cmd['Dst'] = MeianDataTypes.BOL(dst);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -930,11 +966,11 @@ module.exports.MeianMessageFunctions = {
 
   // SetZone: function (pos, typ, voice, name, bell) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Type'] = types.TYP(typ, ['NO', 'DE', 'SI', 'IN', 'FO', 'HO24', 'FI', 'KE', 'GAS', 'WT']);
-  //     cmd['Voice'] = types.TYP(voice, ['CX', 'MC', 'NO']);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Bell'] = types.BOL(bell);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['Type'] = MeianDataTypes.TYP(typ, ['NO', 'DE', 'SI', 'IN', 'FO', 'HO24', 'FI', 'KE', 'GAS', 'WT']);
+  //     cmd['Voice'] = MeianDataTypes.TYP(voice, ['CX', 'MC', 'NO']);
+  //     cmd['Name'] = MeianDataTypes.STR(name);
+  //     cmd['Bell'] = MeianDataTypes.BOL(bell);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -965,7 +1001,7 @@ module.exports.MeianMessageFunctions = {
 
   // FskStudy: function (en) {
   //     var cmd = {};
-  //     cmd['Study'] = types.BOL(en);
+  //     cmd['Study'] = MeianDataTypes.BOL(en);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -976,7 +1012,7 @@ module.exports.MeianMessageFunctions = {
 
   // GetWlsStatus: function (num) {
   //     var cmd = {};
-  //     cmd['Num'] = types.S32(num);
+  //     cmd['Num'] = MeianDataTypes.S32(num);
   //     cmd['Bat'] = null;
   //     cmd['Tamp'] = null;
   //     cmd['Status'] = null;
@@ -990,7 +1026,7 @@ module.exports.MeianMessageFunctions = {
 
   // DelWlsDev: function (num) {
   //     var cmd = {};
-  //     cmd['Num'] = types.S32(num);
+  //     cmd['Num'] = MeianDataTypes.S32(num);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -1002,8 +1038,8 @@ module.exports.MeianMessageFunctions = {
   // WlsSave: function (typ, num, code) {
   //     var cmd = {};
   //     cmd['Type'] = 'TYP,NO|%d' % typ;
-  //     cmd['Num'] = types.S32(num, 1);
-  //     cmd['Code'] = types.STR(code);
+  //     cmd['Num'] = MeianDataTypes.S32(num, 1);
+  //     cmd['Code'] = MeianDataTypes.STR(code);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -1019,7 +1055,7 @@ module.exports.MeianMessageFunctions = {
   // GetWlsList: function (offset) {
   //     var cmd = {};
   //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
+  //     cmd['Offset'] = MeianDataTypes.S32(offset || 0);
   //     cmd['Ln'] = null;
   //     cmd['Err'] = null;
   //     //request
@@ -1043,8 +1079,8 @@ module.exports.MeianMessageFunctions = {
 
   // OpSwitch: function (self, pos, en) {
   //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['En'] = types.BOL(en);
+  //     cmd['Pos'] = MeianDataTypes.S32(pos, 1);
+  //     cmd['En'] = MeianDataTypes.BOL(en);
   //     cmd['Err'] = null;
   //     //request
   //     return {
@@ -1060,7 +1096,7 @@ module.exports.MeianMessageFunctions = {
   //  */
   // Reset: function (ret) {
   //     var cmd = {};
-  //     cmd['Ret'] = types.BOL(ret);
+  //     cmd['Ret'] = MeianDataTypes.BOL(ret);
   //     cmd['Err'] = null;
   //     //request
   //     return {

@@ -1,5 +1,5 @@
-const TestSocket = require('./test-utils.js')
-const alarmStatus = require('../src/status-decoder')()
+import TestSocket from './test-utils.js'
+
 const args = {}
 process.argv.slice(2).forEach(function (val) {
   if (val.indexOf('=') > -1) {
@@ -64,7 +64,7 @@ const zones = args.zones
 
 // test all
 TestSocket(host, port, username, password, zones, [
-  {
+  /* {
     command: 'GetNet'
   },
   {
@@ -79,36 +79,37 @@ TestSocket(host, port, username, password, zones, [
   {
     command: 'GetArea'
   },
-  /*
+
   {
     command: 'GetArea',
     args: [[0, true]]
   },
   {
     command: 'SetArea',
-    args: [[0, alarmStatus.fromStatusToTcpValue('ARMED_HOME')]]
+    args: [[0, MeianStatusDecoder.fromStatusToTcpValue('ARMED_HOME')]]
   },
   {
     command: 'SetArea',
-    args: [[0, alarmStatus.fromStatusToTcpValue('DISARMED')]]
+    args: [[0, MeianStatusDecoder.fromStatusToTcpValue('DISARMED')]]
   },
-   */
+
   {
     command: 'SetAlarmStatus',
-    args: [[alarmStatus.fromStatusToTcpValue('ARMED_HOME')]]
+    args: [[MeianStatusDecoder.fromStatusToTcpValue('ARMED_HOME')]]
   },
   {
     command: 'GetByWay'
-  },
+  },   */
   {
     command: 'SetByWay',
-    args: [[0, true]]
-  },
+    args: [[2, false]]
+  }
+  /*
   {
     command: 'SetAlarmStatus',
-    args: [[alarmStatus.fromStatusToTcpValue('DISARMED')]]
+    args: [[MeianStatusDecoder.fromStatusToTcpValue('DISARMED')]]
   },
   {
     command: ['GetAlarmStatus', 'GetByWay', 'GetLog', 'GetZone']
-  }
+  }   */
 ])

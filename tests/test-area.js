@@ -1,5 +1,5 @@
 
-const alarmStatus = require('../src/status-decoder')()
+import { MeianStatusDecoder, MeianClient } from '../index.js'
 
 const args = {}
 process.argv.slice(2).forEach(function (val) {
@@ -21,9 +21,8 @@ if (!username || !password) {
   console.log('will test meianClient on ' + host + ':' + port)
 
   function testSocket (commands, commandsArgs, callback) {
-    const MeianSocket = require('../src/meian-socket')
     console.log(`Sending command: ${commands} with args ${commandsArgs}`)
-    MeianSocket(host, port, username, password).executeCommand(commands, commandsArgs).then(function (data) {
+    MeianClient(host, port, username, password).executeCommand(commands, commandsArgs).then(function (data) {
       console.log(`Response: ${JSON.stringify(data)}`)
       if (callback) {
         callback()
@@ -38,7 +37,7 @@ if (!username || !password) {
   // testSocket(['SetByWay'], [[0, true]])
   // testSocket(['GetArea'], [[0]])
   // testSocket(['GetArea', 'GetArea', 'GetArea', 'GetArea'], [[0], [1], [2], [3]])
-  testSocket(['SetArea'], [[0, alarmStatus.fromStatusToTcpValue('ARMED_HOME')]], function () {
+  testSocket(['SetArea'], [[0, MeianStatusDecoder.fromStatusToTcpValue('ARMED_HOME')]], function () {
     setTimeout(() => {
       testSocket(['GetArea'], [[0]], function () {
         setTimeout(() => {

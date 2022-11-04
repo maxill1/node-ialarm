@@ -2,6 +2,7 @@
     "name": "ialarm",
     "version": "0.6.0",
     "description": "A node library to control iAlarm/antifurtocasa365, Casasicura/Siqura and other chinese 'TCP IP' alarm system like Meian ST-IVCGT clones and Emooluxr",
+    "type": "module",
     "repository": {
         "type": "git",
         "url": "git://github.com/maxill1/node-ialarm.git"
@@ -10,7 +11,7 @@
         "winston": "^3.3.3",
         "xml-js": "^1.6.11"
     },
-    "main": "ialarm.js",
+    "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -25,10 +26,11 @@
     "author": "Luca Mazzilli",
     "license": "MIT",
     "devDependencies": {
-        "eslint": "^7.32.0",
-        "eslint-config-standard": "^16.0.3",
-        "eslint-plugin-import": "^2.25.2",
+        "eslint": "^8.26.0",
+        "eslint-config-standard": "^17.0.0",
+        "eslint-plugin-import": "^2.26.0",
+        "eslint-plugin-n": "^15.4.0",
         "eslint-plugin-node": "^11.1.0",
-        "eslint-plugin-promise": "^5.1.0"
+        "eslint-plugin-promise": "^6.1.1"
     }
 }

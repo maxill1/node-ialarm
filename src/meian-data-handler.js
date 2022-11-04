@@ -1,6 +1,13 @@
-const logger = require('./logger')('info')
-const alarmStatus = require('./status-decoder')()
-const DataHandler = {
+
+import Meianlogger from './meian-logger.js'
+import MeianStatusDecoder from './meian-status-decoder.js'
+
+const logger = Meianlogger('info')
+
+/**
+ * Manipulate data of multiple responses and add some custom logic to triggers
+ */
+const MeianDataHandler = {
   getStatusAlarm: (data, _fullResponse) => {
     return {
       status: data // we will not observe "TRIGGERED" here
@@ -79,23 +86,23 @@ const DataHandler = {
       }
     }
 
-    const zones = DataHandler.mergeZonesInfo(
+    const zones = MeianDataHandler.mergeZonesInfo(
       // return only filtered zones
-      DataHandler.zoneFilter(GetByWay.zones, zonesToQuery),
+      MeianDataHandler.zoneFilter(GetByWay.zones, zonesToQuery),
       GetZone.zones)
 
     // zone triggered (after the merge we know the type)
-    const triggeredArea = alarmStatus.getTriggeredArea(zones, status)
+    const triggeredArea = MeianStatusDecoder.getTriggeredArea(zones, status)
     triggeredArea.forEach(trigger => {
       const triggeredSensors = triggeredArea.map(a => `${a.zone.id} ${a.zone.name} ${a.area}`)
       logger.warn(`Alarm ${trigger.area} is ${JSON.stringify(GetAlarmStatus[trigger.area])} and triggered by zones: ${JSON.stringify(triggeredSensors)}`)
       // set to triggered
-      status[trigger.area] = alarmStatus.fromTcpValueToStatus('4')
+      status[trigger.area] = MeianStatusDecoder.fromTcpValueToStatus('4')
     })
 
     return {
-      zones: zones,
-      status: status
+      zones,
+      status
     }
   },
   /**
@@ -112,9 +119,9 @@ const DataHandler = {
         return info
       }
     }
-    return DataHandler.zoneFilter(zones)
+    return MeianDataHandler.zoneFilter(zones)
   }
 
 }
 
-module.exports = DataHandler
+export default MeianDataHandler

@@ -1,14 +1,11 @@
 
-const constants = require('./src/constants')
-const MeianSocket = require('./src/meian-socket')
-const alarmStatus = require('./src/status-decoder')()
-const DataHandler = require('./src/data-handler')
+import { MeianConstants, MeianSocket, MeianDataHandler, MeianStatusDecoder, MeianLogger } from '../ialarm'
 
 // we use this counter to delay concurrent executeCommand calls
 let requestRunning = 0
 
 function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDelay) {
-  const logger = require('./src/logger')(logLevel)
+  const logger = MeianLogger(logLevel)
 
   concurrentDelay = concurrentDelay || 200
 
@@ -16,7 +13,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
 
   // build zones array from max zone number
   if (zonesToQuery && !Array.isArray(zonesToQuery)) {
-    const zonesSize = parseInt(zonesToQuery) || constants.listLimit.GetZone
+    const zonesSize = parseInt(zonesToQuery) || MeianConstants.listLimit.GetZone
     zonesToQuery = []
     for (let index = 0; index < zonesSize; index++) {
       const zoneNumber = index + 1 // zone 1, 2, etc
@@ -154,14 +151,14 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
    * Status: armed/disarmed/triggered for areas
    */
   self.getStatusArea = function () {
-    return singleFetch(['GetArea', 'GetAlarmStatus'], DataHandler.getStatusArea)
+    return singleFetch(['GetArea', 'GetAlarmStatus'], MeianDataHandler.getStatusArea)
   }
 
   /**
    * Alarm status: armed/disarmed/triggered and all sensors data with names
    */
   self.getStatusAlarm = async function () {
-    return singleFetch('GetAlarmStatus', DataHandler.GetAlarmStatus)
+    return singleFetch('GetAlarmStatus', MeianDataHandler.GetAlarmStatus)
   }
 
   /**
@@ -186,7 +183,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
     }
 
     return singleFetch(commands, (data, { GetByWay, GetZone, GetAlarmStatus }) => {
-      return DataHandler.getZoneStatus(status || GetAlarmStatus, GetByWay, zoneInfoCache || GetZone, zonesToQuery)
+      return MeianDataHandler.getZoneStatus(status || GetAlarmStatus, GetByWay, zoneInfoCache || GetZone, zonesToQuery)
     })
   }
 
@@ -233,10 +230,10 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
   self.armDisarm = function (requestedArmedStatus, numArea) {
     const numAreaIndex = numArea && numArea > 0 ? numArea - 1 : 0
     if (numAreaIndex > 0) {
-      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      const value = MeianStatusDecoder.fromStatusToTcpValue(requestedArmedStatus)
       return fetchWithSimpleResponse(['SetArea'], [[numAreaIndex, value]])
     } else {
-      const value = alarmStatus.fromStatusToTcpValue(requestedArmedStatus)
+      const value = MeianStatusDecoder.fromStatusToTcpValue(requestedArmedStatus)
       return fetchWithSimpleResponse(['SetAlarmStatus'], [value])
     }
   }
@@ -259,7 +256,7 @@ function MeianClient (host, port, uid, pwd, zonesToQuery, logLevel, concurrentDe
    */
   self.getZoneInfo = function (zoneNumber) {
     return singleFetch('GetZone', (GetZone) => {
-      return DataHandler.getZoneInfo(GetZone, zoneNumber)
+      return MeianDataHandler.getZoneInfo(GetZone, zoneNumber)
     })
   }
 

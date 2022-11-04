@@ -1,8 +1,7 @@
 
-const { MeianMessage } = require('ialarm/src/meian-message')
-const fs = require('fs')
-const path = require('path')
-const messageHandler = MeianMessage()
+import fs from 'fs'
+import path from 'path'
+import { MeianMessage } from '../ialarm'
 
 const baseDir = path.join(__dirname, './')
 
@@ -33,6 +32,6 @@ fs.readFile(`${baseDir}/message.txt`, 'utf8', (err, fileData) => {
     .split(/[\\x]/).join('')
 
   const message = hex2a(hex)
-  const xml = messageHandler.extractMessage(message)
+  const xml = MeianMessage.extractMessage(message)
   console.log('Decoded message ' + xml)
 })

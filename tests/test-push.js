@@ -1,4 +1,5 @@
-const TestSocket = require('./test-utils.js')
+import TestSocket from './test-utils.js'
+
 const args = {}
 process.argv.slice(2).forEach(function (val) {
   if (val.indexOf('=') > -1) {
@@ -16,12 +17,12 @@ const zones = args.zones
 
 // test all
 TestSocket(host, port, username, password, zones, [
-  {
+  /* {
     command: 'GetNet'
-  },
+  }, */
   {
     command: 'GetAlarmStatus'
-  },
+  } /*
   {
     command: 'GetZone'
   },
@@ -29,13 +30,13 @@ TestSocket(host, port, username, password, zones, [
     command: 'GetByWay'
   },
   // this will produce also an "Alarm" response
-  /* {
+  {
     command: 'SetByWay',
     args: [[0, true]]
-  }, */
+  },
   {
     command: 'GetByWay'
-  }
+  } */
 ],
 // hold connection open to receive push
 60000

@@ -1,5 +1,4 @@
-
-module.exports = {
+const MeianConstants = {
   promiseTimeout: 2000,
   socketTimeout: 60000,
   listLimit: {
@@ -101,3 +100,5 @@ module.exports = {
     3: 'Muto'
   }
 }
+
+export default MeianConstants

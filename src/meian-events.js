@@ -1,4 +1,4 @@
-const EventEmitter = require('events')
+import EventEmitter from 'events'
 
 /**
  * Events related to the Alarm
@@ -110,4 +110,4 @@ const MeianEvents = {
   }
 }
 
-module.exports = MeianEvents
+export default MeianEvents

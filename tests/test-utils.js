@@ -1,10 +1,10 @@
-const MeianSocket = require('../src/meian-socket')
-const DataHandler = require('../src/data-handler')
+
+import { MeianClient, MeianDataHandler } from '../index.js'
 
 function TestSocket (host, port, username, password, zonesToQuery, tests, isPushClient) {
   let testIndex = 0
 
-  const socket = MeianSocket(host, port, username, password, 'debug', zonesToQuery, isPushClient)
+  const socket = MeianClient(host, port, username, password, 'debug', zonesToQuery, isPushClient)
 
   function log (message) {
     console.log(`test-socket: ${message}`)
@@ -48,7 +48,7 @@ function TestSocket (host, port, username, password, zonesToQuery, tests, isPush
 
       // merge responses.
       if (GetAlarmStatus && GetByWay && GetZone) {
-        log(JSON.stringify(DataHandler.getZoneStatus(GetAlarmStatus, GetByWay, GetZone, zonesToQuery)))
+        log(JSON.stringify(MeianDataHandler.getZoneStatus(GetAlarmStatus, GetByWay, GetZone, zonesToQuery)))
       }
 
       testIndex++
@@ -114,4 +114,4 @@ function TestSocket (host, port, username, password, zonesToQuery, tests, isPush
   }
 }
 
-module.exports = TestSocket
+export default TestSocket
