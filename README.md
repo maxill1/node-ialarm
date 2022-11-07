@@ -37,7 +37,7 @@ Example with 40 zones, multiple commands and dump to file:
 npx meian-cli -c GetNet -c GetAlarmStatus -c GetZone -c GetByWay -c SetByWay(1,true) -c GetLogs -s 192.168.1.81 -u MyUsername -p MyPassword -z 40 -o /MyFolder/dump.json
 ```
 
-N.B. with bash you may wraè commands with args in "
+N.B. with bash you may need to write commands with quotes
 
 ```
 npx meian-cli -c "SetByWay(1,true)" -s 192.168.1.81 -u MyUsername -p MyPassword 
