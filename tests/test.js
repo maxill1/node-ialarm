@@ -1,5 +1,5 @@
 import { describe, expect, /* beforeAll, afterAll, beforeEach, */it, jest } from '@jest/globals'
-import { MeianTCPResponseFormatter, MeianMessage, MeianStatusDecoder } from '../index.js'
+import { MeianCommands, MeianMessage, MeianMessageCleaner, MeianStatusDecoder } from '../index.js'
 import TestSocket from './test-utils.js'
 import testdata from './test-dump.json'
 
@@ -40,7 +40,7 @@ function testMessages (command) {
       expect(rawData).toEqual(compare.rawData)
 
       // formatted
-      const formatted = (MeianTCPResponseFormatter[command] || MeianTCPResponseFormatter.default)(rawData)
+      const formatted = ((MeianCommands[command] && MeianCommands[command].formatter) || MeianMessageCleaner.default)(rawData)
       expect(formatted).toEqual(compare.data)
 
       // generate again an xml and convert it to raw data
@@ -89,7 +89,7 @@ function testMeianSocket (commandsNames, commandArgs, dumpResponses, push) {
 jest.setTimeout(30000)
 
 describe('Meian client tests', () => {
-  describe('Testing MeianTCPResponseFormatter and MeianMessage', () => {
+  describe('Testing MeianMessageCleaner and MeianMessage', () => {
     testMessages('GetArea')
     testMessages('Client')
     testMessages('GetAlarmStatus')

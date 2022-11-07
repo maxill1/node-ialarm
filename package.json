@@ -2,6 +2,10 @@
     "name": "ialarm",
     "version": "0.6.0",
     "description": "A node library to control iAlarm/antifurtocasa365, Casasicura/Siqura and other chinese 'TCP IP' alarm system like Meian ST-IVCGT clones and Emooluxr",
+    "bin": {
+        "meian-cli": "./cli.js",
+        "ialarm-cli": "./cli.js"
+    },
     "type": "module",
     "jest": {
         "testEnvironment": "node"
@@ -12,11 +16,13 @@
     },
     "dependencies": {
         "winston": "^3.3.3",
-        "xml-js": "^1.6.11"
+        "xml-js": "^1.6.11",
+        "yargs": "^17.6.2"
     },
     "main": "index.js",
     "scripts": {
-        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "docs": "jsdoc2md src/meian-commands.js > Commands.md"
     },
     "keywords": [
         "ialarm",
@@ -35,6 +41,7 @@
         "eslint-plugin-n": "^15.4.0",
         "eslint-plugin-node": "^11.1.0",
         "eslint-plugin-promise": "^6.1.1",
-        "jest": "^29.2.2"
+        "jest": "^29.2.2",
+        "jsdoc-to-markdown": "^7.1.1"
     }
 }

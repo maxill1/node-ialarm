@@ -1,8 +1,8 @@
 import { MeianConnection, ConnectionStatus } from './meian-connection.js'
 import MeianEvents from './meian-events.js'
-import { MeianMessage, MeianMessageFunctions } from './meian-message.js'
+import { MeianMessage, MeianMessageCleaner } from './meian-message.js'
+import { MeianCommands } from './meian-commands.js'
 import MeianConstants from './meian-constants.js'
-import MeianTCPResponseFormatter from './meian-tcp-response-formatters.js'
 
 function initListLimits (limit) {
   const num = parseInt(limit)
@@ -90,11 +90,11 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
     } else if (!Array.isArray(currentArgs)) {
       currentArgs = [currentArgs]
     }
-    const funct = MeianMessageFunctions[command]
-    if (!funct) {
+    const commandDef = MeianCommands[command]
+    if (!commandDef) {
       throw new Error(`Unknown command: ${command}`)
     }
-    const msg = funct(...currentArgs)
+    const msg = commandDef.message(...currentArgs)
     return msg
   }
 
@@ -134,7 +134,7 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
       commandData.payloads.rawData[currentCommand] = []
 
       // data formatters
-      const formatter = MeianTCPResponseFormatter[currentCommand] || MeianTCPResponseFormatter.default
+      const formatter = (MeianCommands[currentCommand] && MeianCommands[currentCommand].formatter) || MeianMessageCleaner.default
 
       // 3) send protocol messages in sequence
       const currentArgs = commandArgs && commandArgs[currentIndex]
@@ -159,9 +159,9 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
           // lets determine the size of the whole list
           const hostData = response?.rawData?.Root?.Host[currentCommand]
 
-          const total = MeianTCPResponseFormatter.cleanData(hostData.Total.value) || 0
-          const offset = MeianTCPResponseFormatter.cleanData(hostData.Offset.value)
-          const ln = MeianTCPResponseFormatter.cleanData(hostData.Ln.value) || 0
+          const total = MeianMessageCleaner.cleanData(hostData.Total.value) || 0
+          const offset = MeianMessageCleaner.cleanData(hostData.Offset.value)
+          const ln = MeianMessageCleaner.cleanData(hostData.Ln.value) || 0
 
           // es: GetZone has total = 40, ln = 2, offset = 0. We need to call the same command 20 times before getting all the Zones
           const cicles = Math.ceil(total / ln)
@@ -324,8 +324,7 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
           // requested something but received another response...yes it happens, most of the time the response is a push notification "Alarm" command
           // using EventEmitter allows us to receive multiple response from one command and resolve only the correct one
           if (command === 'Alarm') {
-            const formatter = MeianTCPResponseFormatter[command]
-            const alarmContent = formatter(json)
+            const alarmContent = MeianCommands[command].formatter(json)
             logger.warning(`${commandPrettyName}: command sent but received an 'Alarm' push notification... ${alarmContent}`)
             MeianEvents.push({
               commandName: command, // name of the original command in response
@@ -386,7 +385,7 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
 
     logger.log('debug', `${transactionToString(transactionId)}: logging in to ${host}:${port}`)
 
-    const loginMsg = MeianMessageFunctions.Client(uid, pwd)
+    const loginMsg = MeianCommands.Client.message(uid, pwd)
     const loginResponse = await sendMessage(loginMsg, { command: 'Client' }, transactionId, ConnectionStatus.CONNECTED_AUTHENTICATING)
     MeianConnection.lastLogin = new Date().getTime()
 
@@ -401,7 +400,7 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
 
     logger.log('debug', `${transactionToString(transactionId)}: subscribing push client to ${host}:${port}`)
 
-    const pushMsg = MeianMessageFunctions.Push(uid)
+    const pushMsg = MeianCommands.Push.message(uid)
     const pushResponse = await sendMessage(pushMsg, { command: 'Push' }, transactionId, ConnectionStatus.CONNECTED_AUTHENTICATING)
     MeianConnection.lastSubscribe = new Date().getTime()
 

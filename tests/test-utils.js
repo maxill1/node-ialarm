@@ -1,12 +1,12 @@
 
-import { MeianClient, MeianDataHandler } from '../index.js'
+import { MeianSocket, MeianDataHandler } from '../index.js'
 import fs from 'fs'
 
 function TestSocket (host, port, username, password, zonesToQuery, tests, isPushClient, saveFile) {
   return new Promise((resolve) => {
     let testIndex = 0
 
-    const socket = MeianClient(host, port, username, password, 'debug', zonesToQuery, isPushClient)
+    const socket = MeianSocket(host, port, username, password, 'debug', zonesToQuery, isPushClient)
 
     function log (message) {
       console.log(`test-socket: ${message}`)
@@ -52,7 +52,7 @@ function TestSocket (host, port, username, password, zonesToQuery, tests, isPush
     if (!username || !password) {
       log('Please provide a valid username and password: node ialarm-test username=myuser password=mypassword')
     } else {
-      log('will test MeianClient on ' + host + ':' + port)
+      log('will test MeianSocket on ' + host + ':' + port)
 
       /**
    * ready to send commands
