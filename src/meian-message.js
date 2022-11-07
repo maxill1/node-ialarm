@@ -1,57 +1,95 @@
+import convert from 'xml-js'
 
-const convert = require('xml-js')
-const MeianDataTypes = require('./meian-datatypes')
-const types = MeianDataTypes()
+const type = function (name, input) {
+  const size = input.length
+  return `${name},${size}|${input}`
+}
+
+export const MeianDataTypes = {
+  BOL: function (en) {
+    if (en) {
+      return 'BOL|T'
+    }
+    return 'BOL|F'
+  },
+  DTA: function (date) {
+    const dta = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}.${date.getHours()}.${date.getMinutes()}.${date.getSeconds()}`
+    const size = dta.length
+    return `DTA,${size}|${dta}`
+  },
+  PWD: function (pwd) {
+    return type('PWD', pwd)
+  },
+  S32: function (val, pos = 0, max) {
+    if (!max) {
+      max = pos
+    }
+    return `S32,${pos},${max}|${val}`
+  },
+  IPA: function (ip) {
+    return type('IPA', ip)
+  },
+  STR: function (text) {
+    return type('STR', text)
+  },
+  TYP: function (val, typ = []) {
+    try {
+      const t = typ[val]
+      return `TYP,${t}|${val}`
+    } catch (error) {
+      return `TYP,NONE,|${val}` % val
+    }
+  }
+}
+
+/**
+ * 128 bytes key as byte array
+ */
+const KEY = ((hexString) => {
+  const result = []
+  for (let i = 0; i < hexString.length; i += 2) {
+    result.push(parseInt(hexString.substr(i, 2), 16))
+  }
+  return result
+})('0c384e4e62382d620e384e4e44382d300f382b382b0c5a6234384e304e4c372b10535a0c20432d171142444e58422c421157322a204036172056446262382b5f0c384e4e62382d620e385858082e232c0f382b382b0c5a62343830304e2e362b10545a0c3e432e1711384e625824371c1157324220402c17204c444e624c2e12')
+
+const toString = function (bytes) {
+  let str = ''
+  for (let i = 0; i < bytes.length; i++) {
+    str += String.fromCharCode(bytes[i])
+  }
+  return str
+}
+
+const getBytes = function (str) {
+  const bytes = str.split('').map(function s (x) { return x.charCodeAt(0) })
+  return bytes
+}
+
+/**
+   * XOR encrypted/decrypted message with a 128 bytes key
+   */
+const decryptEncrypt = function (message) {
+  const bytes = getBytes(message)
+  // var str = toString(buf)
+  // console.log(str)
+  for (let i = 0; i < bytes.length; i++) {
+    const ki = i & 0x7f
+    bytes[i] = bytes[i] ^ KEY[ki]
+  }
+  return bytes
+}
 
 /**
  * Meian Message builder/parse based on this specs:
  * https://github.com/wildstray/meian-client/wiki
  */
-function MeianMessage () {
-  const self = this
 
-  /**
-       * 128 bytes key as byte array
-       */
-  const KEY = ((hexString) => {
-    const result = []
-    for (let i = 0; i < hexString.length; i += 2) {
-      result.push(parseInt(hexString.substr(i, 2), 16))
-    }
-    return result
-  })('0c384e4e62382d620e384e4e44382d300f382b382b0c5a6234384e304e4c372b10535a0c20432d171142444e58422c421157322a204036172056446262382b5f0c384e4e62382d620e385858082e232c0f382b382b0c5a62343830304e2e362b10545a0c3e432e1711384e625824371c1157324220402c17204c444e624c2e12')
-
-  const toString = function (bytes) {
-    let str = ''
-    for (let i = 0; i < bytes.length; i++) {
-      str += String.fromCharCode(bytes[i])
-    }
-    return str
-  }
-
-  const getBytes = function (str) {
-    const bytes = str.split('').map(function s (x) { return x.charCodeAt(0) })
-    return bytes
-  }
-
-  /**
-     * XOR encrypted/decrypted message with a 128 bytes key
-     */
-  const decryptEncrypt = function (message) {
-    const bytes = getBytes(message)
-    // var str = toString(buf)
-    // console.log(str)
-    for (let i = 0; i < bytes.length; i++) {
-      const ki = i & 0x7f
-      bytes[i] = bytes[i] ^ KEY[ki]
-    }
-    return bytes
-  }
-
+export const MeianMessage = {
   /**
      * Encrypt and build a message
      */
-  self.createMessage = function (xml, sequence, isRequest) {
+  createMessage: function (xml, sequence, isRequest) {
     if (!sequence) {
       sequence = 1
     }
@@ -64,994 +102,284 @@ function MeianMessage () {
     const msgEnding = !isRequest ? msgSize : '0000' // Last four bytes are size of encrypted data for request, 0000 or -001 for response
     const msg = `${msgType}${msgSize}${msgSeq}${msgFiller}${encryptedMessage}${msgEnding}`
     return msg
-  }
+  },
 
   /**
      * Encrypt and build a message
      */
-  self.extractMessage = function (data) {
+  extractMessage: function (data) {
     // remove head (msg type, size and filler) and tail (msg size or -0001)
     const encryptedMessage = data.substring(0, data.length - 4).substring(16)
     const decryptedMessageBytes = decryptEncrypt(encryptedMessage)
     const message = toString(decryptedMessageBytes)
     return message
+  },
+  toXml: function (cmd, rootPath) {
+    // eventually adds /Root/Host/CommandName
+    let data = {}
+    if (rootPath) {
+      const paths = rootPath.split('/')
+      let lastIteratedObj = data
+      for (let i = 1; i < paths.length; i++) {
+        const key = paths[i]
+        lastIteratedObj[key] = {}
+        if (i === paths.length - 1) {
+          lastIteratedObj[key] = cmd
+        }
+        lastIteratedObj = lastIteratedObj[key]
+      }
+    } else {
+      data = cmd
+    }
+    const xml = convert.js2xml(data, { compact: true, fullTagEmptyElement: true, spaces: 0, textKey: 'value' })
+    return xml
+  },
+  toJson: function (xml) {
+    // cleanup <Err>ERR|00</Err> at root
+    let Err
+    if (xml.indexOf('<Err>ERR') === 0) {
+      const error = xml.substring(0, xml.indexOf('</Err>') + 6)
+      xml = xml.replace(error, '')
+      Err = convert.xml2js(error, { compact: true, textKey: 'value' })
+    }
+    const data = convert.xml2js(xml, { compact: true, textKey: 'value' })
+    // apply <Err>ERR|00</Err> at root
+    if (Err) {
+      data.Err = Err.Err.value
+    }
+    return data
+  },
+  /**
+   * Convert to XML the data, encrypt the message
+   */
+  prepareMessage: function (root, cmd, sequence) {
+    const xml = MeianMessage.toXml(cmd, root)
+    // console.log('Requesting XML ' + xml);
+
+    const msg = MeianMessage.createMessage(xml, sequence || 1, true)
+    // console.log('Requesting RAW ' + msg);
+
+    return msg
   }
 
-  return self
 }
 
-module.exports.MeianMessage = MeianMessage
+export const TYPES = /BOL|DTA|ERR|GBA|HMA|IPA|MAC|NEA|NUM|PWD|S32|STR|TYP/
+export const BOL = /BOL\|([FT])/
+export const DTA = /DTA(,\d+)*\|(\d{4}\.\d{2}.\d{2}.\d{2}.\d{2}.\d{2})/
+export const ERR = /ERR\|(\d{2})/
+export const GBA = /GBA,(\d+)\|([0-9A-F]*)/
+export const HMA = /HMA,(\d+)\|(\d{2}:\d{2})/
+export const IPA = /IPA,(\d+)\|(([0-2]?\d{0,2}\.){3}([0-2]?\d{0,2}))/
+export const MAC = /MAC,(\d+)\|(([0-9A-F]{2}[:-]){5}([0-9A-F]{2}))/
+export const NEA = /NEA,(\d+)\|([0-9A-F]+)/
+export const NUM = /NUM,(\d+),(\d+)\|(\d*)/
+export const PWD = /PWD,(\d+)\|(.*)/
+export const S32 = /S32,(\d+),(\d+)\|(\d*)/
+export const STR = /STR,(\d+)\|(.*)/
+export const TYP = /TYP,(\w+)\|(\d+)/
+
+const getHostData = function (response, hostType) {
+  const content = response?.Root?.Host || {}
+  const commandName = Object.keys(content)[0]
+  return content[commandName]
+}
+
+const getPairData = function (response, hostType) {
+  const content = response?.Root?.Pair || {}
+  const commandName = Object.keys(content)[0]
+  return content[commandName]
+}
 
 /**
- * Convert to XML the data, encrypt the message
- */
-function _prepareMessage (root, cmd, sequence) {
-  const paths = root.split('/')
-  const data = {}
-  let lastIteratedObj = data
-  for (let i = 1; i < paths.length; i++) {
-    const key = paths[i]
-    lastIteratedObj[key] = {}
-    if (i === paths.length - 1) {
-      lastIteratedObj[key] = cmd
+   * get index from a line node (L0, L1, L2, L3, etc)
+   * @param {*} key
+   */
+const _getLineNumber = function (key) {
+  const regRows = key.match(/L(\d{1,2})/)
+  if (regRows && regRows.length > 0) {
+    const index = parseInt(regRows[1])
+    if (!isNaN(index)) {
+      return index
     }
-    lastIteratedObj = lastIteratedObj[key]
   }
-  const xml = convert.js2xml(data, { compact: true, fullTagEmptyElement: true, spaces: 0 })
-  // console.log('Requesting XML ' + xml);
-
-  const msg = MeianMessage().createMessage(xml, sequence || 1, true)
-  // console.log('Requesting RAW ' + msg);
-
-  return msg
+  return null
 }
 
-module.exports.MeianMessageFunctions = {
-  /**
-     * Login
-     */
-  Client: function (uid, pwd) {
-    const cmd = {}
-    cmd.Id = types.STR(uid)
-    cmd.Pwd = types.PWD(pwd)
-    cmd.Type = 'TYP,ANDROID|0'
-    cmd.Token = types.STR(function () {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0; const v = c == 'x' ? r : (r & 0x3 | 0x8)
-        return v.toString(16)
-      })
-    }())
-    cmd.Action = 'TYP,IN|0'
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      socketStatus: 'autenticating',
-      message: _prepareMessage('/Root/Pair/Client', cmd)
-    }
-  },
-  /**
-    * Get current alarm status
-    */
-  GetAlarmStatus: function () {
-    const cmd = {}
-    cmd.DevStatus = null
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      message: _prepareMessage('/Root/Host/GetAlarmStatus', cmd)
-    }
-  },
-
-  /**
-    * Get area status
-    * <Root>
-    *   <Host>
-    *       <GetArea>
-    *           <Total/>
-    *           <Offset>S32,0,0|0</Offset>
-    *           <Ln/>
-    *           <Err/>
-    *       </GetArea>
-    *   </Host>
-    * </Root>
-    */
-  GetArea: function (offset) {
-    offset = offset || 0
-    const cmd = {}
-    cmd.Total = null
-    cmd.Offset = types.S32(offset)
-    cmd.Ln = null
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      offset: offset,
-      isList: true,
-      message: _prepareMessage('/Root/Host/GetArea', cmd)
-    }
-  },
-
-  /**
-     * Set current alarm status for area
-     * <Root>
-     *  <Host>
-     *      <SetArea>
-     *          <Pos>S32,0,3|3</Pos>
-     *          <Status>S32,0,0|0</Status>
-     *          <Err/>
-     *      </SetArea>
-     *  </Host>
-     * </Root>
-     */
-  SetArea: function (numArea, status) {
-    status = status || 0
-    numArea = numArea || 0
-    // 0,1,2
-    const cmd = {}
-    cmd.Pos = types.S32(numArea, 0, 3) // max 4 aree
-    cmd.Status = types.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      message: _prepareMessage('/Root/Host/SetArea', cmd)
-    }
-  },
-
-  /**
-    * get sensor status (alarm/open/closed, problem, lowbat, bypass, etc)
-    */
-  GetByWay: function (offset) {
-    offset = offset || 0
-
-    const cmd = {}
-    cmd.Total = null
-    cmd.Offset = types.S32(offset)
-    cmd.Ln = null
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      offset: offset,
-      isList: true,
-      message: _prepareMessage('/Root/Host/GetByWay', cmd, offset)
-    }
-  },
-
-  /**
-     * All zones status (fault, battery, loss, etc)
-     * @param {*} offset
-     */
-  GetZone: function (offset) {
-    offset = offset || 0
-
-    const cmd = {}
-    cmd.Total = null
-    cmd.Offset = types.S32(offset || 0)
-    cmd.Ln = null
-    cmd.Err = null
-
-    // request
-    return {
-      seq: 0,
-      offset: offset,
-      isList: true,
-      message: _prepareMessage('/Root/Host/GetZone', cmd, offset)
-    }
-  },
-
-  /**
-     * Log, total is max 512 and it may take some time
-     * @param {*} offset
-     */
-  GetLog: function (offset) {
-    offset = offset || 0
-    const cmd = {}
-    cmd.Total = null
-    cmd.Offset = types.S32(offset || 0)
-    cmd.Ln = null
-    cmd.Err = null
-
-    // request
-    return {
-      seq: 0,
-      offset: offset,
-      isList: true,
-      message: _prepareMessage('/Root/Host/GetLog', cmd, offset)
-    }
-  },
-
-  /**
-     * Alarm name, mac address and network configuration
-     * @returns
-     */
-  GetNet: function () {
-    const cmd = {}
-    cmd.Mac = null
-    cmd.Name = null
-    cmd.Ip = null
-    cmd.Gate = null
-    cmd.Subnet = null
-    cmd.Dns1 = null
-    cmd.Dns2 = null
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      message: _prepareMessage('/Root/Host/GetNet', cmd)
-    }
-  },
-
-  /**
-     * Set current alarm status
-     */
-  SetAlarmStatus: function (status) {
-    // 0,1,2
-    const cmd = {}
-    cmd.DevStatus = types.TYP(status, ['ARM', 'DISARM', 'STAY', 'CLEAR'])
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      message: _prepareMessage('/Root/Host/SetAlarmStatus', cmd)
-    }
-  },
-
-  /**
-     * Set bypass for sensor
-     * @param {*} pos
-     * @param {*} en
-     */
-  SetByWay: function (pos, en) {
-    const cmd = {}
-    cmd.Pos = types.S32(pos, 1)
-    cmd.En = types.BOL(en)
-    cmd.Err = null
-    // request
-    return {
-      seq: 0,
-      message: _prepareMessage('/Root/Host/SetByWay', cmd)
-    }
+/**
+   * When multiple messages are neede to get a full list, this function will handle the parsing and push
+   */
+const _parseListableData = function (listName, list, lineParser) {
+  if (!Array.isArray(list)) {
+    list = [list]
   }
 
-  // NOT TESTED
+  const container = {
+    // current formatted list
+    [listName]: []
+  }
 
-  // /**
-  //  * AlarmEvent.htm
-  //  * TODO may be a list
-  //  */
-  // GetEvents: function () {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetEvents', cmd)
-  //     };
-  // },
+  list.forEach(root => {
+    const current = getHostData(root) || {}
+    const linesTotal = MeianMessageCleaner.cleanData(current.Ln?.value) || 0
+    const offset = MeianMessageCleaner.cleanData(current.Offset?.value) || 0
 
-  // GetGprs: function () {
-  //     var cmd = {};
-  //     cmd['Apn'] = null;
-  //     cmd['User'] = null;
-  //     cmd['Pwd'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetGprs', cmd)
-  //     };
-  // },
+    for (let queryIndex = 0; queryIndex < linesTotal; queryIndex++) {
+      // L0, L1, L2
+      const lineKey = 'L' + queryIndex
+      const element = current[lineKey]
+      if (!element) {
+        // L1, Lx may not exit on last call
+        continue
+      }
+      const elementIndex = offset + queryIndex
 
-  // /**
-  //  * TODO may be a list, should be arm/disarm timer functions
-  //  */
-  // GetDefense: function () {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetDefense', cmd)
-  //     };
-  // },
+      // extract L0, L1, etc and add them to the list in the container
+      _listBasedFormatter(lineKey, element, container, listName, lineParser, true, linesTotal, offset,
+        elementIndex) // index build using offset and L0,L1,L2
+    }
+  })
 
-  // GetEmail: function () {
-  //     var cmd = {};
-  //     cmd['Ip'] = null;
-  //     cmd['Port'] = null;
-  //     cmd['User'] = null;
-  //     cmd['Pwd'] = null;
-  //     cmd['EmailSend'] = null;
-  //     cmd['EmailRecv'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetEmail', cmd)
-  //     };
-  // },
+  // formatted data
+  return container
+}
 
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetOverlapZone: function () {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32();
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetOverlapZone', cmd)
-  //     };
-  // },
+/**
+   * parses a line based response
+   * @param {*} key current iterated key
+   * @param {*} element xml element value
+   * @param {*} data the response object
+   * @param {*} listName the name of the list containing lines (events, logs, etc)
+   */
+const _listBasedFormatter = function (key, value, data, listName, rowFormatter, push, linesTotal, offset, elementIndex) {
+  // L0, L1, etc
+  const lineNumber = _getLineNumber(key)
+  if (lineNumber !== null && rowFormatter) {
+    const row = rowFormatter(value, key, lineNumber, linesTotal, offset, elementIndex)
+    if (!data[listName]) {
+      data[listName] = []
+    }
+    if (push) {
+      data[listName].push(row)
+    } else {
+      data[listName][lineNumber] = row
+    }
+  }
+}
 
-  // GetPairServ: function () {
-  //     var cmd = {};
-  //     cmd['Ip'] = null;
-  //     cmd['Port'] = null;
-  //     cmd['Id'] = null;
-  //     cmd['Pwd'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetPairServ', cmd)
-  //     };
-  // },
+export const MeianMessageCleaner = {
 
-  // /**
-  //  * Configurazione telefonica
-  //  * TODO may be a list
-  //  */
-  // GetPhone: function () {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(0);
-  //     cmd['Ln'] = null;
-  //     cmd['RepeatCnt'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetPhone', cmd)
-  //     };
-  // },
+  /**
+     * cleanup the response
+     */
+  cleanData: function (input) {
+    let value = input
+    const type = TYPES.exec(input) && TYPES.exec(input)[0]
+    // if (!type) {
+    //   console.log(`No type found for ${input}`)
+    // }
 
-  // /**
-  //  * Telecomandi
-  //  * @param {*} offset
-  //  */
-  // GetRemote: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRemote', cmd, offset)
-  //     };
-  // },
+    switch (type) {
+      case 'BOL': {
+        const bol = BOL.exec(input)[1]
+        if (bol === 'T') {
+          value = true
+        }
+        if (bol === 'F') {
+          value = false
+        }
+        break
+      }
+      case 'DTA': {
+        // 2020.06.04.18.40.03
+        const dta = DTA.exec(input)[2].split('.')
+        value = new Date(Date.UTC(dta[0], parseInt(dta[1]) - 1, dta[2], dta[3], dta[4], dta[5])).toISOString()
+        break
+      }
+      case 'ERR':
+        value = parseInt(ERR.exec(input)[0])
+        break
+      case 'GBA': {
+        const bytes = GBA.exec(input)[2]
+        const hexTooAscii = function (str1) {
+          const hex = str1.toString()
+          let str = ''
+          for (let n = 0; n < hex.length; n += 2) {
+            str += String.fromCharCode(parseInt(hex.substr(n, 2), 16))
+          }
+          return str
+        }
+        value = hexTooAscii(bytes)
+        break
+      }
+      case 'HMA': {
+        // 00:00
+        const hma = HMA.exec(input)[2]
+        value = hma
+        // value = time.strptime(hma, '%H:%M')
+        break
+      }
+      case 'IPA':
+        // IPA,16|192.168.1.81
+        value = String(IPA.exec(input)[2])
+        break
+      case 'MAC':
+        // MAC,17|00:00:xx:xx:xx:xx
+        value = String(MAC.exec(input)[2])
+        break
+      case 'NEA':
+        value = String(NEA.exec(input)[2])
+        break
+      case 'NUM':
+        value = String(NUM.exec(input)[2])
+        break
+      case 'PWD':
+        value = String(PWD.exec(input)[2])
+        break
+      case 'S32':
+        value = parseInt(S32.exec(input)[3])
+        break
+      case 'STR':
+        value = String(STR.exec(input)[2])
+        break
+      case 'TYP':
+        value = parseInt(TYP.exec(input)[2])
+        break
+      default:
+        // console.log(`No type found for ${input}`)
+        break
+    }
 
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetRfid: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRfid', cmd, offset)
-  //     };
-  // },
+    if (value && value.trim) {
+      value = value.trim()
+    }
 
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetRfidType: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetRfidType', cmd, offset)
-  //     };
-  // },
+    return value
+  },
 
-  // GetSendby: function (cid) {
-  //     var cmd = {};
-  //     cmd['Cid'] = types.STR(cid);
-  //     cmd['Tel'] = null;
-  //     cmd['Voice'] = null;
-  //     cmd['Sms'] = null;
-  //     cmd['Email'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetSendby', cmd)
-  //     };
-  // },
+  parseData: function (response, parser, listName, hostType) {
+    if (!Array.isArray(response)) {
+      response = [response]
+    }
 
-  // /**
-  //  * Sensor List with id
-  //  * TODO decoder
-  //  * @param {*} offset
-  //  */
-  // GetSensor: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSensor', cmd, offset)
-  //     };
-  // },
+    let first = getHostData(response[0], hostType)
+    if (!first) {
+      first = getPairData(response[0], hostType)
+    }
+    const linesTotal = MeianMessageCleaner.cleanData(first.Ln?.value) || 0
+    // list
+    if (linesTotal > 0) {
+      return _parseListableData(listName || 'list', response, parser)
+    } else if (parser) {
+      // single command
+      return parser(first)
+    } else {
+      return first
+    }
+  },
 
-  // GetServ: function () {
-  //     var cmd = {};
-  //     cmd['En'] = null;
-  //     cmd['Ip'] = null;
-  //     cmd['Port'] = null;
-  //     cmd['Name'] = null;
-  //     cmd['Pwd'] = null;
-  //     cmd['Cnt'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetServ', cmd)
-  //     };
-  // },
-
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetSwitch: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSwitch', cmd, offset)
-  //     };
-  // },
-
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetSwitchInfo: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetSwitchInfo', cmd, offset)
-  //     };
-  // },
-
-  // /**
-  //  * system configuration (InDelay, OutDelay, AlarmTime, WlLoss, AcLoss, ComLoss, ArmVoice, ArmReport, ForceArm, DoorCheck, BreakCheck, AlarmLimit, etc)
-  //  */
-  // GetSys: function () {
-  //     var cmd = {};
-  //     cmd['InDelay'] = null;
-  //     cmd['OutDelay'] = null;
-  //     cmd['AlarmTime'] = null;
-  //     cmd['WlLoss'] = null;
-  //     cmd['AcLoss'] = null;
-  //     cmd['ComLoss'] = null;
-  //     cmd['ArmVoice'] = null;
-  //     cmd['ArmReport'] = null;
-  //     cmd['ForceArm'] = null;
-  //     cmd['DoorCheck'] = null;
-  //     cmd['BreakCheck'] = null;
-  //     cmd['AlarmLimit'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetSys', cmd)
-  //     };
-  // },
-
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetTel: function (offset) {
-  //     var cmd = {};
-  //     cmd['En'] = null;
-  //     cmd['Code'] = null;
-  //     cmd['Cnt'] = null;
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetTel', cmd, offset)
-  //     };
-  // },
-
-  // GetTime: function () {
-  //     var cmd = {};
-  //     cmd['En'] = null;
-  //     cmd['Name'] = null;
-  //     cmd['Type'] = null;
-  //     cmd['Time'] = null;
-  //     cmd['Dst'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetTime', cmd)
-  //     };
-  // },
-
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetVoiceType: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetVoiceType', cmd, offset)
-  //     };
-  // },
-
-  // /**
-  //  * TODO may be a list
-  //  */
-  // GetZoneType: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetZoneType', cmd, offset)
-  //     };
-  // },
-
-  // SetDefense: function (pos, hmdef = '00:00', hmundef = '00:00') {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Def'] = types.STR(hmdef);
-  //     cmd['Undef'] = types.STR(hmundef);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetDefense', cmd)
-  //     };
-  // },
-
-  // SetEmail: function (ip, port, user, pwd, emailsend, emailrecv) {
-  //     var cmd = {};
-  //     cmd['Ip'] = types.STR(ip);
-  //     cmd['Port'] = types.S32(port);
-  //     cmd['User'] = types.STR(user);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['EmailSend'] = types.STR(emailsend);
-  //     cmd['EmailRecv'] = types.STR(emailrecv);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetEmail', cmd)
-  //     };
-  // },
-
-  // SetGprs: function (apn, user, pwd) {
-  //     var cmd = {};
-  //     cmd['Apn'] = types.STR(apn);
-  //     cmd['User'] = types.STR(user);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetGprs', cmd)
-  //     };
-  // },
-
-  // SetNet: function (mac, name, ip, gate, subnet, dns1, dns2) {
-  //     var cmd = {};
-  //     cmd['Mac'] = types.MAC(mac);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Ip'] = types.IPA(ip);
-  //     cmd['Gate'] = types.IPA(gate);
-  //     cmd['Subnet'] = types.IPA(subnet);
-  //     cmd['Dns1'] = types.IPA(dns1);
-  //     cmd['Dns2'] = types.IPA(dns2);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetNet', cmd)
-  //     };
-  // },
-
-  // SetOverlapZone: function (pos, zone1, zone2, time) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Zone1'] = types.S32(zone1, 1);
-  //     cmd['Zone1'] = types.S32(zone2, 1);
-  //     cmd['Time'] = types.S32(time, 1);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetOverlapZone', cmd)
-  //     };
-  // },
-
-  // SetPairServ: function (ip, port, uid, pwd) {
-  //     var cmd = {};
-  //     cmd['Ip'] = types.IPA(ip);
-  //     cmd['Port'] = types.S32(port, 1);
-  //     cmd['Id'] = types.STR(uid);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetPairServ', cmd)
-  //     };
-  // },
-
-  // SetPhone: function (pos, num) {
-  //     var cmd = {};
-  //     cmd['Type'] = types.TYP(1, ['F', 'L']);
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Num'] = types.STR(num);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetPhone', cmd)
-  //     };
-  // },
-
-  // SetRfid: function (pos, code, typ, msg) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Type'] = types.S32(typ, ['NO', 'DS', 'HS', 'DM', 'HM', 'DC']);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Msg'] = types.STR(msg);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetRfid', cmd)
-  //     };
-  // },
-
-  // SetRemote: function (pos, code) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetRemote', cmd)
-  //     };
-  // },
-
-  // SetSendby: function (cid, tel, voice, sms, email) {
-  //     var cmd = {};
-  //     cmd['Cid'] = types.STR(cid);
-  //     cmd['Tel'] = types.BOL(tel);
-  //     cmd['Voice'] = types.BOL(voice);
-  //     cmd['Sms'] = types.BOL(sms);
-  //     cmd['Email'] = types.BOL(email);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSendby', cmd)
-  //     };
-  // },
-
-  // SetSensor: function (pos, code) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSensor', cmd)
-  //     };
-  // },
-
-  // SetServ: function (en, ip, port, name, pwd, cnt) {
-  //     var cmd = {};
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Ip'] = types.STR(ip);
-  //     cmd['Port'] = types.S32(port, 1);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Pwd'] = types.PWD(pwd);
-  //     cmd['Cnt'] = types.S32(cnt, 1);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetServ', cmd)
-  //     };
-  // },
-
-  // SetSwitch: function (pos, code) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSwitch', cmd)
-  //     };
-  // },
-
-  // SetSwitchInfo: function (pos, name, hmopen = '00:00', hmclose = '00:00') {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Name'] = types.STR(name.substring(0, 7).encode('hex'));
-  //     cmd['Open'] = types.STR(hmopen);
-  //     cmd['Close'] = types.STR(hmclose);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSwitchInfo', cmd)
-  //     };
-  // },
-
-  // SetSys: function (indelay, outdelay, alarmtime, wlloss, acloss, comloss, armvoice, armreport, forcearm, doorcheck, breakcheck, alarmlimit) {
-  //     var cmd = {};
-  //     cmd['InDelay'] = types.S32(indelay, 1);
-  //     cmd['OutDelay'] = types.S32(outdelay, 1);
-  //     cmd['AlarmTime'] = types.S32(alarmtime, 1);
-  //     cmd['WlLoss'] = types.S32(wlloss, 1);
-  //     cmd['AcLoss'] = types.S32(acloss, 1);
-  //     cmd['ComLoss'] = types.S32(comloss, 1);
-  //     cmd['ArmVoice'] = types.BOL(armvoice);
-  //     cmd['ArmReport'] = types.BOL(armreport);
-  //     cmd['ForceArm'] = types.BOL(forcearm);
-  //     cmd['DoorCheck'] = types.BOL(doorcheck);
-  //     cmd['BreakCheck'] = types.BOL(breakcheck);
-  //     cmd['AlarmLimit'] = types.BOL(alarmlimit);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetSys', cmd)
-  //     };
-  // },
-
-  // SetTel: function (en, code, cnt) {
-  //     var cmd = {};
-  //     cmd['Typ'] = types.TYP(0, ['F', 'L']);
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Code'] = types.NUM(code);
-  //     cmd['Cnt'] = types.S32(cnt, 1);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetTel', cmd)
-  //     };
-  // },
-
-  // SetTime: function (en, name, typ, time, dst) {
-  //     var cmd = {};
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Type'] = 'TYP,0|%d' % typ;
-  //     cmd['Time'] = types.DTA(time);
-  //     cmd['Dst'] = types.BOL(dst);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetTime', cmd)
-  //     };
-  // },
-
-  // SetZone: function (pos, typ, voice, name, bell) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['Type'] = types.TYP(typ, ['NO', 'DE', 'SI', 'IN', 'FO', 'HO24', 'FI', 'KE', 'GAS', 'WT']);
-  //     cmd['Voice'] = types.TYP(voice, ['CX', 'MC', 'NO']);
-  //     cmd['Name'] = types.STR(name);
-  //     cmd['Bell'] = types.BOL(bell);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SetZone', cmd)
-  //     };
-  // },
-
-  // WlsStudy: function () {
-  //     var cmd = {};
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/WlsStudy', cmd)
-  //     };
-  // },
-
-  // ConfigWlWaring: function () {
-  //     var cmd = {};
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/ConfigWlWaring', cmd)
-  //     };
-  // },
-
-  // FskStudy: function (en) {
-  //     var cmd = {};
-  //     cmd['Study'] = types.BOL(en);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/FskStudy', cmd)
-  //     };
-  // },
-
-  // GetWlsStatus: function (num) {
-  //     var cmd = {};
-  //     cmd['Num'] = types.S32(num);
-  //     cmd['Bat'] = null;
-  //     cmd['Tamp'] = null;
-  //     cmd['Status'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/GetWlsStatus', cmd)
-  //     };
-  // },
-
-  // DelWlsDev: function (num) {
-  //     var cmd = {};
-  //     cmd['Num'] = types.S32(num);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/DelWlsDev', cmd)
-  //     };
-  // },
-
-  // WlsSave: function (typ, num, code) {
-  //     var cmd = {};
-  //     cmd['Type'] = 'TYP,NO|%d' % typ;
-  //     cmd['Num'] = types.S32(num, 1);
-  //     cmd['Code'] = types.STR(code);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/WlsSave', cmd)
-  //     };
-  // },
-
-  // /**
-  //  * ????
-  //  * @param {*} offset
-  //  */
-  // GetWlsList: function (offset) {
-  //     var cmd = {};
-  //     cmd['Total'] = null;
-  //     cmd['Offset'] = types.S32(offset || 0);
-  //     cmd['Ln'] = null;
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         offset: offset,
-  //         isList: true, //enable list handler
-  //         message: _prepareMessage('/Root/Host/GetWlsList', cmd, offset)
-  //     };
-  // },
-
-  // SwScan: function () {
-  //     var cmd = {};
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/SwScan', cmd)
-  //     };
-  // },
-
-  // OpSwitch: function (self, pos, en) {
-  //     var cmd = {};
-  //     cmd['Pos'] = types.S32(pos, 1);
-  //     cmd['En'] = types.BOL(en);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         seq: 0,
-  //         message: _prepareMessage('/Root/Host/OpSwitch', cmd)
-  //     };
-  // },
-
-  // /**
-  //  * Reset the alarm to factory default or reboot??
-  //  * @param {*} ret
-  //  * @returns
-  //  */
-  // Reset: function (ret) {
-  //     var cmd = {};
-  //     cmd['Ret'] = types.BOL(ret);
-  //     cmd['Err'] = null;
-  //     //request
-  //     return {
-  //         //isList: true,
-  //         message: _prepareMessage('/Root/Host/Reset', cmd)
-  //     };
-  // }
+  default: function (response) {
+    return MeianMessageCleaner.parseData(response)
+  }
 
 }

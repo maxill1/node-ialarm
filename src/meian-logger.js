@@ -1,6 +1,6 @@
 
-const winston = require('winston')
-module.exports = function (level) {
+import winston from 'winston'
+export const MeianLogger = function (level) {
   const logger = winston.createLogger({
     levels: winston.config.syslog.levels,
     format: winston.format.simple(),
@@ -25,3 +25,5 @@ module.exports = function (level) {
 
   return logger
 }
+
+export default MeianLogger
