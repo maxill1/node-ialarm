@@ -376,8 +376,14 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
           logger.log('info', `${transactionToString(loginTransactionId)}: subscribed to ${host}:${port} with response ${JSON.stringify(response)}`)
           MeianEvents.connected(MeianConnection.lastSubscribe)
         } else {
-          const response = await login(loginTransactionId)
-          logger.log('info', `${transactionToString(loginTransactionId)}: logged in to ${host}:${port} with response ${JSON.stringify(response)}`)
+          // login is not mandatory
+          if (uid && pwd) {
+            const response = await login(loginTransactionId)
+            logger.log('info', `${transactionToString(loginTransactionId)}: logged in to ${host}:${port} with response ${JSON.stringify(response)}`)
+          } else {
+            logger.log('info', `${transactionToString(loginTransactionId)}: no uid or pwd provided for ${host}:${port} proceeding withoud login`)
+            updateStatus(ConnectionStatus.CONNECTED_READY, loginTransactionId)
+          }
           MeianEvents.connected(MeianConnection.lastLogin)
         }
       } catch (error) {
