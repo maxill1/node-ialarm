@@ -86,7 +86,7 @@ const MeianEvents = {
   onCommandResponse: (cmd, callback) => {
     const id = `cmdResponse${cmd}`
     const onCmdResponse = (arg1, arg2, arg3, arg4) => {
-      console.log(`${id}: Removing 1 Listeners (total: ${MeianEvents.events.listenerCount(id)})`)
+      // console.log(`${id}: Removing 1 Listeners (total: ${MeianEvents.events.listenerCount(id)})`)
 
       // prevent EventEmitter memory leak
       MeianEvents.events.removeListener(id, onCmdResponse)
