@@ -84,6 +84,43 @@ const MeianDataHandler = {
       status = {
         status_1: GetAlarmStatus
       }
+    } else if (GetAlarmStatus.areas && Array.isArray(GetAlarmStatus.areas)) {
+      // get area
+      /*
+     {  areas: [
+    {
+      id: 1,
+      area: 1,
+      value: 2,
+      status: "ARMED_HOME",
+    },
+    {
+      id: 2,
+      area: 2,
+      value: 1,
+      status: "DISARMED",
+    },
+    {
+      id: 3,
+      area: 3,
+      value: 1,
+      status: "DISARMED",
+    },
+    {
+      id: 4,
+      area: 4,
+      value: 1,
+      status: "DISARMED",
+    },
+  ]}
+      */
+      const areas = GetAlarmStatus.areas
+      status = {
+        status_1: areas[0].status,
+        status_2: areas[1].status,
+        status_3: areas[2].status,
+        status_4: areas[3].status
+      }
     }
 
     const zones = MeianDataHandler.mergeZonesInfo(
