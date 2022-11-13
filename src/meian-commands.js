@@ -143,7 +143,9 @@ export const MeianCommands = {
         // line.queryNumber = lineNumber + '/' + lineTotal + '-' + offset + '('+key+')';
         line.id = (elementIndex + 1) // base 1
         line.area = line.id
-        line.status = MeianMessageCleaner.cleanData(lineValue.Status.value)
+        line.value = MeianMessageCleaner.cleanData(lineValue.Status.value)
+        line.status = MeianStatusDecoder.fromTcpValueToStatus(line.value)
+
         return line
       },
       'areas')
