@@ -1,5 +1,5 @@
 import { describe, expect, /* beforeAll, afterAll, beforeEach, */it, jest } from '@jest/globals'
-import { MeianCommands, MeianMessage, MeianMessageCleaner, MeianStatusDecoder } from '../index.js'
+import { MeianCommands, MeianMessage, MeianMessageCleaner, MeianDataHandler } from '../index.js'
 import TestSocket from './test-utils.js'
 import testdata from './test-dump.json'
 
@@ -86,6 +86,19 @@ function testMeianSocket (commandsNames, commandArgs, dumpResponses, push) {
   })
 }
 
+function testMeianDataHandler (functionName, desctiption, data, dataExpected, propertyToCheck) {
+  it(`MeianDataHandler ${functionName} - ${desctiption} - (${JSON.stringify(data)})`, async () => {
+    const funct = MeianDataHandler[functionName]
+    expect(funct).toBeDefined()
+
+    const [arg1, arg2, arg3, arg4] = Array.isArray(data) ? data : [data]
+
+    const compare = funct(arg1, arg2, arg3, arg4)
+
+    expect(propertyToCheck ? dataExpected[propertyToCheck] : dataExpected).toEqual(propertyToCheck ? compare[propertyToCheck] : compare)
+  })
+}
+
 jest.setTimeout(30000)
 
 describe('Meian client tests', () => {
@@ -98,6 +111,409 @@ describe('Meian client tests', () => {
     testMessages('GetZone')
   })
 
+  describe('Testing MeianDataHandler', () => {
+    const GetAlarmStatusArmedHome = {
+      status: 'ARMED_HOME'
+    }
+    const GetAlarmStatusDisarmed = {
+      status: 'DISARMED'
+    }
+    const GetAreaArmedHome = { areas: [{ area: 1, id: 1, status: 'ARMED_HOME', value: 2 }, { area: 2, id: 2, value: 1, status: 'DISARMED' }, { area: 3, id: 3, value: 1, status: 'DISARMED' }, { area: 4, id: 4, value: 1, status: 'DISARMED' }] }
+    const GetAreaDisarmed = { areas: [{ area: 1, id: 1, status: 'DISARMED', value: 2 }, { area: 2, id: 2, value: 1, status: 'DISARMED' }, { area: 3, id: 3, value: 1, status: 'DISARMED' }, { area: 4, id: 4, value: 1, status: 'DISARMED' }] }
+
+    const GetByWay = {
+      zones: [
+        {
+          id: 1,
+          name: 'L0',
+          status: 1,
+          inUse: true,
+          ok: true,
+          alarm: false,
+          bypass: false,
+          lowbat: false,
+          fault: false,
+          wirelessLoss: false,
+          problem: false,
+          message: 'OK'
+        },
+        {
+          id: 2,
+          name: 'L1',
+          status: 1,
+          inUse: true,
+          ok: true,
+          alarm: false,
+          bypass: false,
+          lowbat: false,
+          fault: false,
+          wirelessLoss: false,
+          problem: false,
+          message: 'OK'
+        },
+        {
+          id: 3,
+          name: 'L2',
+          status: 1,
+          inUse: true,
+          ok: true,
+          alarm: false,
+          bypass: false,
+          lowbat: false,
+          fault: false,
+          wirelessLoss: false,
+          problem: false,
+          message: 'OK'
+        },
+        {
+          id: 4,
+          name: 'L4',
+          status: 1,
+          inUse: true,
+          ok: true,
+          alarm: false,
+          bypass: false,
+          lowbat: false,
+          fault: false,
+          wirelessLoss: false,
+          problem: false,
+          message: 'OK'
+        },
+        {
+          id: 5,
+          name: 'L5',
+          status: 1,
+          inUse: true,
+          ok: true,
+          alarm: false,
+          bypass: false,
+          lowbat: false,
+          fault: false,
+          wirelessLoss: false,
+          problem: false,
+          message: 'OK'
+        }
+      ]
+    }
+
+    const GetZone = {
+      zones: [
+        {
+          id: 1,
+          zone: 1,
+          name: 'Zone 1',
+          typeId: 1,
+          type: 'Ritardata',
+          voiceId: 1,
+          voiceName: 'Fisso'
+        },
+        {
+          id: 2,
+          zone: 2,
+          name: 'Zone 2',
+          typeId: 2,
+          type: 'Perimetrale',
+          voiceId: 1,
+          voiceName: 'Fisso'
+        },
+        {
+          id: 3,
+          zone: 3,
+          name: 'Zone 3',
+          typeId: 2,
+          type: 'Perimetrale',
+          voiceId: 1,
+          voiceName: 'Fisso'
+        },
+        {
+          id: 4,
+          zone: 4,
+          name: 'Zone 4',
+          typeId: 2,
+          type: 'Perimetrale',
+          voiceId: 1,
+          voiceName: 'Fisso'
+        },
+        {
+          id: 5,
+          zone: 5,
+          name: 'Zone 5',
+          typeId: 2,
+          type: 'Perimetrale',
+          voiceId: 1,
+          voiceName: 'Fisso'
+        }
+      ]
+    }
+
+    const MERGED_ZONES = [
+      {
+        id: 1,
+        name: 'Zone 1',
+        status: 1,
+        inUse: true,
+        ok: true,
+        alarm: false,
+        bypass: false,
+        lowbat: false,
+        fault: false,
+        wirelessLoss: false,
+        problem: false,
+        message: 'OK',
+        zone: 1,
+        typeId: 1,
+        type: 'Ritardata',
+        voiceId: 1,
+        voiceName: 'Fisso'
+      },
+      {
+        id: 2,
+        name: 'Zone 2',
+        status: 1,
+        inUse: true,
+        ok: true,
+        alarm: false,
+        bypass: false,
+        lowbat: false,
+        fault: false,
+        wirelessLoss: false,
+        problem: false,
+        message: 'OK',
+        zone: 2,
+        typeId: 2,
+        type: 'Perimetrale',
+        voiceId: 1,
+        voiceName: 'Fisso'
+      },
+      {
+        id: 3,
+        name: 'Zone 3',
+        status: 1,
+        inUse: true,
+        ok: true,
+        alarm: false,
+        bypass: false,
+        lowbat: false,
+        fault: false,
+        wirelessLoss: false,
+        problem: false,
+        message: 'OK',
+        zone: 3,
+        typeId: 2,
+        type: 'Perimetrale',
+        voiceId: 1,
+        voiceName: 'Fisso'
+      },
+      {
+        id: 4,
+        name: 'Zone 4',
+        status: 1,
+        inUse: true,
+        ok: true,
+        alarm: false,
+        bypass: false,
+        lowbat: false,
+        fault: false,
+        wirelessLoss: false,
+        problem: false,
+        message: 'OK',
+        zone: 4,
+        typeId: 2,
+        type: 'Perimetrale',
+        voiceId: 1,
+        voiceName: 'Fisso'
+      },
+      {
+        id: 5,
+        name: 'Zone 5',
+        status: 1,
+        inUse: true,
+        ok: true,
+        alarm: false,
+        bypass: false,
+        lowbat: false,
+        fault: false,
+        wirelessLoss: false,
+        problem: false,
+        message: 'OK',
+        zone: 5,
+        typeId: 2,
+        type: 'Perimetrale',
+        voiceId: 1,
+        voiceName: 'Fisso'
+      }
+    ]
+
+    const zonesToQuery = [1, 2, 3]
+
+    // testing triggers
+    const GetByWayTriggered = {
+      zones: ((zones) => {
+        zones[1] = {
+          ...zones[1],
+          alarm: true // triggered
+        }
+        return zones
+      })([...GetByWay.zones])
+    }
+
+    const GetZoneH24 = {
+      zones: ((zones) => {
+        zones[1] = {
+          ...zones[1],
+          typeId: 5, // H24
+          type: 'FakeH24'
+        }
+        return zones
+      })([...GetZone.zones])
+    }
+
+    // GetAlarmStatus
+    testMeianDataHandler('getStatus',
+      'GetAlarmStatus disarmed status as string',
+      'DISARMED',
+      {
+        status_1: 'DISARMED',
+        status_2: 'UNKNOWN',
+        status_3: 'UNKNOWN',
+        status_4: 'UNKNOWN'
+      })
+    // GetAlarmStatus.status
+    testMeianDataHandler('getStatus',
+      'GetAlarmStatus armed status',
+      GetAlarmStatusArmedHome,
+      {
+        status_1: 'ARMED_HOME',
+        status_2: 'UNKNOWN',
+        status_3: 'UNKNOWN',
+        status_4: 'UNKNOWN'
+      })
+    testMeianDataHandler('getStatus',
+      'GetAlarmStatus disarmed status',
+      GetAlarmStatusDisarmed,
+      {
+        status_1: 'DISARMED',
+        status_2: 'UNKNOWN',
+        status_3: 'UNKNOWN',
+        status_4: 'UNKNOWN'
+      })
+
+    // GetArea
+    testMeianDataHandler('getStatus',
+      'GetArea armed status',
+      GetAreaArmedHome,
+      {
+        status_1: 'ARMED_HOME',
+        status_2: 'DISARMED',
+        status_3: 'DISARMED',
+        status_4: 'DISARMED'
+      }
+    )
+    testMeianDataHandler('getStatus',
+      'GetArea disarmed status',
+      GetAreaDisarmed,
+      {
+        status_1: 'DISARMED',
+        status_2: 'DISARMED',
+        status_3: 'DISARMED',
+        status_4: 'DISARMED'
+      }
+    )
+
+    // ignoring zone 4 and 5
+    testMeianDataHandler('zoneFilter',
+      'ignoring zone 4 and 5',
+      [
+        GetByWay.zones,
+        zonesToQuery // ignoring zone 4 and 5
+      ],
+      GetByWay.zones.slice(0, 3))
+
+    // filter zone 4
+    testMeianDataHandler('getZoneInfo',
+      'filtering zone 4',
+      [
+        GetByWay,
+        4
+      ],
+      GetByWay.zones[3])
+
+    testMeianDataHandler('mergeZonesInfo', 'merging GetByWay and GetZone', [GetByWay.zones, GetZone.zones], MERGED_ZONES)
+
+    // GetAlarmStatus armed with 1 zone triggered
+    testMeianDataHandler('getZoneStatus',
+      'GetAlarmStatus armed with 1 zone triggered',
+      [
+        GetAlarmStatusArmedHome,
+        GetByWayTriggered,
+        GetZone,
+        zonesToQuery
+      ],
+      {
+        zones: MeianDataHandler.mergeZonesInfo(GetByWayTriggered.zones, GetZone.zones, zonesToQuery),
+        status: {
+          status_1: 'TRIGGERED',
+          status_2: 'UNKNOWN',
+          status_3: 'UNKNOWN',
+          status_4: 'UNKNOWN'
+        }
+      })
+    // GetAlarmStatus disarmed but with H24 triggered
+    testMeianDataHandler('getZoneStatus',
+      'GetAlarmStatus disarmed but with H24 triggered',
+      [
+        GetAlarmStatusDisarmed,
+        GetByWayTriggered,
+        GetZoneH24,
+        zonesToQuery
+      ],
+      {
+        zones: MeianDataHandler.mergeZonesInfo(GetByWayTriggered.zones, GetZoneH24.zones, zonesToQuery),
+        status: {
+          status_1: 'TRIGGERED',
+          status_2: 'UNKNOWN',
+          status_3: 'UNKNOWN',
+          status_4: 'UNKNOWN'
+        }
+      })
+
+    // GetArea armed with 1 zone triggered
+    testMeianDataHandler('getZoneStatus',
+      'GetArea armed with 1 zone triggered',
+      [
+        GetAreaArmedHome,
+        GetByWayTriggered,
+        GetZone,
+        zonesToQuery
+      ],
+      {
+        zones: MeianDataHandler.mergeZonesInfo(GetByWayTriggered.zones, GetZone.zones, zonesToQuery),
+        status: {
+          status_1: 'TRIGGERED',
+          status_2: 'DISARMED',
+          status_3: 'DISARMED',
+          status_4: 'DISARMED'
+        }
+      })
+    // GetArea disarmed but with H24 triggered
+    testMeianDataHandler('getZoneStatus',
+      ' GetArea disarmed but with H24 triggered',
+      [
+        GetAreaDisarmed,
+        GetByWayTriggered,
+        GetZoneH24,
+        zonesToQuery
+      ],
+      {
+        zones: MeianDataHandler.mergeZonesInfo(GetByWayTriggered.zones, GetZoneH24.zones, zonesToQuery),
+        status: {
+          status_1: 'TRIGGERED',
+          status_2: 'DISARMED',
+          status_3: 'DISARMED',
+          status_4: 'DISARMED'
+        }
+      })
+  })
   if (username && password) {
     if (push) {
       describe('Testing Client and responses and leaving connection open for "Push" test', () => {
