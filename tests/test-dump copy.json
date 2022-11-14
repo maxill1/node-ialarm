@@ -1,0 +1,470 @@
+{
+  "Client": {
+    "encrypted": "@ieM0071000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^dY'BpptGy64x\u001ehec|xa\u001d0^|-xqFI%Xc\u001ejk2\u0003QYa0\u0017\u001c!\rL\u00130000",
+    "xml": "<Err>ERR|00</Err><Root><Pair><Client><Err></Err></Client></Pair></Root>",
+    "data": {
+      "Err": {
+      }
+    },
+    "rawData": {
+      "Root": {
+        "Pair": {
+          "Client": {
+            "Err": {
+            }
+          }
+        }
+      },
+      "Err": "ERR|00"
+    }
+  },
+  "GetArea": {
+    "encrypted": "@ieM0291000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u0012(iA}\u0011C~6%\"f\u0011\u001fp=c\u001e\u001e\\t\n8t90\u0003\u000e\u0006\u0017\u0010j^=+\u0016\u0006~Q<\u0014ht8R\u0013\u0010 wM^Xi.\\\bt^\u000e\u001d\u001d\u0004\u0007 xnp\n\u0001[\u0006r.h\u001a\u000bOe6F7S~xNp`\u0017\u001a#\u0015R 0\u0017\u001d:\u0003LX\u00110\u0004a\u0002t\u0006\u0011|>\u0006\u0017k_m.\u0017G\u0006\u001ai\u001e`sbC\u0012\bA\\r\u00118B6%:-1\u0012~>\u001b\u0003\u0014\u001c\f\u0004)\u001c\u00050\u0003\u0016MXaXa\u001eb&q~#\\u$i4\u0001pXnL^K\u00150u.\u0006\u0006\f|}\u0010\nxd5.yM}zNA\u0014\n+\u000beeQmf\u000ems4McU?zrM\u0000\u001d,0}<<\\\u0004\u0002'|JprkHDNJNY\u00150u*[K:\u000erceD'd0000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetArea><Total>S32,4,4|4</Total><Offset>S32,0,0|0</Offset><Ln>S32,0,4|4</Ln><L0><Status>TYP,STAY|2</Status></L0><L1><Status>TYP,DISARM|1</Status></L1><L2><Status>TYP,DISARM|1</Status></L2><L3><Status>TYP,DISARM|1</Status></L3><Err></Err></GetArea></Host></Root>",
+    "data": { "areas": [{ "area": 1, "id": 1, "status": 2 }, { "area": 2, "id": 2, "status": 1 }, { "area": 3, "id": 3, "status": 1 }, { "area": 4, "id": 4, "status": 1 }]},
+    "rawData": { "Root": { "Host": { "GetArea": { "Total": { "value": "S32,4,4|4" }, "Offset": { "value": "S32,0,0|0" }, "Ln": { "value": "S32,0,4|4" }, "L0": { "Status": { "value": "TYP,STAY|2" } }, "L1": { "Status": { "value": "TYP,DISARM|1" } }, "L2": { "Status": { "value": "TYP,DISARM|1" } }, "L3": { "Status": { "value": "TYP,DISARM|1" } }, "Err": {} } } }, "Err": "ERR|00" }
+  },
+  "GetAlarmStatus": {
+    "encrypted": "@ieM0120000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u00126mR.~cp61=f~h'g\u0004FKT5E)t\u000f\u0014N1lj\u0006p\nra&][1zY,-{\u0010\u001fi}J\u0015\u0004\u0004I(\u0010\n\u0004\u001fw+ZwGq&7_J\"Zbb\u0006rM\u0010KDh/k\u001d\u0010O/X)0000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetAlarmStatus><DevStatus>TYP,STAY|2</DevStatus><Err></Err></GetAlarmStatus></Host></Root>",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetAlarmStatus": {
+            "DevStatus": {
+              "value": "TYP,STAY|2"
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    },
+    "data": "ARMED_HOME"
+  },
+  "GetByWay": {
+    "encrypted": "@ieM0480000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u0011#[A:\u0013+E-0/4|q#{\u0002\u0006\u0014pJ#\u0010jk6\rLJ32\u0004\u0001(\u0004KH\u00160kkj$\u001e\u000f\u0018?D\u001b\u0004\u0004C<\u0004G]D\u000erbX\u0015Cgh \u000eo\u001a'm\tx^whY\"-\u001b\u0002|ss\u001e;\u0011`v{W0\u001f.#t~p^t\u001c\\]\u000b|bu\u0014\u001f\u0005:D\u001a\u0004\u0004@k\\\bt|\u000e\u001d\u0005\u0007!h9\u0015?\u001c+>\u000evpd\u000e\u001f|Bd\u0000\u0006\u0011l\u0004\"\u0015*u^Mt\u0018a0tzp1\u000b\u001fN?\u0014jm=R\u0012\u0010 t\u001f\u0006\u0017@o\\g\u000b\u0002\u001c\u0002\u0004\u001e%(k0\u0011\u000f\u001b)-tx\\\u000b\u0017\u00050 {\u0000w\u0015<\u001d+\u000f\u0000rp^\u0000\u0019,_\u000b|bS\u0014\u001fW;Drkt\u001a\u000e3t\u0013\u0006x?hN\u0005\u0014|\u0005{0\u0006\u0017?\u001fb2\u001c\u000f\u0014)Bqvbin\u001ew$+\u0003\u0016\u000f\f\u000f)\u001c\u001auR\\k\u0018m \tb|W\rQS2\u0017\u0014i8\u0010\u001f`>\t\u0015k\u0018>vS\u0018\n\u0005\u00052\u001f\n\u0004\\ek2\u0002\u000f\u001f%/k}Pt\u0015\u001b.$bNs\u001co`&\u0012rx\u0002S\u0010A?\nbN\n\u0018Wr\tra\b\t\u001e\u000e3t\u001a\f\u0015_iP\u0018\tb\u0002{yK\u001a,|\u0016=\u0014}\u0011[ wz\u001dkp\u0000s=e\u0007\u001f\\y\n8lgq\\^}Y-2\u0004a\u000b\u0010J\u0013^!=,JWtMv\u0006\u0017\u0017cc)\u0016\n\u0004\u001fb!AB\u00150000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetByWay><Total>S32,0,40|40</Total><Offset>S32,0,40|0</Offset><Ln>S32,0,40|16</Ln><L0>S32,1,255|1</L0><L1>S32,1,255|1</L1><L2>S32,1,255|1</L2><L3>S32,1,255|1</L3><L4>S32,1,255|1</L4><L5>S32,1,255|1</L5><L6>S32,1,255|1</L6><L7>S32,1,255|1</L7><L8>S32,1,255|1</L8><L9>S32,1,255|1</L9><L10>S32,1,255|1</L10><L11>S32,1,255|1</L11><L12>S32,1,255|1</L12><L13>S32,1,255|1</L13><L14>S32,1,255|1</L14><L15>S32,1,255|9</L15><Err></Err></GetByWay></Host></Root>",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetByWay": {
+            "Total": {
+              "value": "S32,0,40|40"
+            },
+            "Offset": {
+              "value": "S32,0,40|0"
+            },
+            "Ln": {
+              "value": "S32,0,40|16"
+            },
+            "L0": {
+              "value": "S32,1,255|1"
+            },
+            "L1": {
+              "value": "S32,1,255|1"
+            },
+            "L2": {
+              "value": "S32,1,255|1"
+            },
+            "L3": {
+              "value": "S32,1,255|1"
+            },
+            "L4": {
+              "value": "S32,1,255|1"
+            },
+            "L5": {
+              "value": "S32,1,255|1"
+            },
+            "L6": {
+              "value": "S32,1,255|1"
+            },
+            "L7": {
+              "value": "S32,1,255|1"
+            },
+            "L8": {
+              "value": "S32,1,255|1"
+            },
+            "L9": {
+              "value": "S32,1,255|1"
+            },
+            "L10": {
+              "value": "S32,1,255|1"
+            },
+            "L11": {
+              "value": "S32,1,255|1"
+            },
+            "L12": {
+              "value": "S32,1,255|1"
+            },
+            "L13": {
+              "value": "S32,1,255|1"
+            },
+            "L14": {
+              "value": "S32,1,255|1"
+            },
+            "L15": {
+              "value": "S32,1,255|9"
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    },
+    "data": {
+      "zones": [
+        {
+          "id": 1,
+          "name": "L0",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 2,
+          "name": "L1",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 3,
+          "name": "L2",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 4,
+          "name": "L3",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 5,
+          "name": "L4",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 6,
+          "name": "L5",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 7,
+          "name": "L6",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 8,
+          "name": "L7",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 9,
+          "name": "L8",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 10,
+          "name": "L9",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 11,
+          "name": "L10",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 12,
+          "name": "L11",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 13,
+          "name": "L12",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 14,
+          "name": "L13",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 15,
+          "name": "L14",
+          "status": 1,
+          "inUse": true,
+          "ok": true,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": false,
+          "wirelessLoss": false,
+          "problem": false,
+          "message": "OK"
+        },
+        {
+          "id": 16,
+          "name": "L15",
+          "status": 9,
+          "inUse": true,
+          "ok": false,
+          "alarm": false,
+          "bypass": false,
+          "lowbat": false,
+          "fault": true,
+          "wirelessLoss": false,
+          "message": "Fault",
+          "problem": true
+        }
+      ]
+    }
+  },
+  "GetLog": {
+    "encrypted": "@ieM0341000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u001f5k\u001eyxe#(p\u000bq\u001en!{\u0007\u001b\u0012<\u0003&\u0012jk6\rLJ32\u0004\u0001(\u0004KH\u00160kkj$\u001e\u000f\u0019>\nW\b\u0017#\u0015\u0004RKUDp\u0012zE.\u0007i>\u0012s\u0002\" \n2Pd\u000b{r/k~r\u001e|x~M)z\n6\r\u0002#5D|~P\n\u0003S?\u0016~{j\n\u001e\u001e?\u0001\u0005\u000b\u00190u6]U+\u000er\rENqm\t?\u0012o\u001c;%r8yh~\u0003\u0003c2S\u0014\u001c\u0005@rN\"z16j\u0007kp\u000bzzS\u0004\u0002'x]6,6\u0012\f`?\u0006\u0017t\u001a2f6]UU\u000e\nzw\u0007!m&>\u000eq\u001c9 \t`Rm\n\u0005/?g\u0004l\u0012r\u00108t%)+\\po`iYp\u001dQ\n\u0001S\"\f~2s\b\u0011\u001fNJNY\u00150\u001f\u0014QV:\u000e\u001d\u0018e\u0007$/k8\u0010r\u00118T4! ,|\u0010m]f\f\u0016e2D)\u001cy\u0001\u0010\u0010\u0006\u0017pK]:\u0002\r_\u0013^!p7+|\u0010\u001f\u0003]WDL\u00150000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetLog><Total>S32,0,512|512</Total><Offset>S32,0,512|0</Offset><Ln>S32,0,512|2</Ln><L0><Time>DTA,19|2022.11.05.23.09.32</Time><Area>S32,1,40|70</Area><Event>STR,4|3441</Event></L0><L1><Time>DTA,19|2022.11.05.23.06.22</Time><Area>S32,1,40|70</Area><Event>STR,4|1401</Event></L1><Err></Err></GetLog></Host></Root>",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetLog": {
+            "Total": {
+              "value": "S32,0,512|512"
+            },
+            "Offset": {
+              "value": "S32,0,512|0"
+            },
+            "Ln": {
+              "value": "S32,0,512|2"
+            },
+            "L0": {
+              "Time": {
+                "value": "DTA,19|2022.11.05.23.09.32"
+              },
+              "Area": {
+                "value": "S32,1,40|70"
+              },
+              "Event": {
+                "value": "STR,4|3441"
+              }
+            },
+            "L1": {
+              "Time": {
+                "value": "DTA,19|2022.11.05.23.06.22"
+              },
+              "Area": {
+                "value": "S32,1,40|70"
+              },
+              "Event": {
+                "value": "STR,4|1401"
+              }
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    },
+    "data": {
+      "logs": [
+        {
+          "date": "2022-11-05T23:09:32.000Z",
+          "zone": 70,
+          "message": "Staying Report"
+        },
+        {
+          "date": "2022-11-05T23:06:22.000Z",
+          "zone": 70,
+          "message": "Disarm report"
+        }
+      ]
+    }
+  },
+  "GetZone": {
+    "encrypted": "@ieM0331000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\t5bE}\u0011C~6%\"f\u0011\u001fp=g\u001e\u001e\u0010<\u0002'\u001cy\u0010\r\u0016YGa0w((\u0011]Y\\]\u000bjt8\u0002\u0017\u001cs\b\u0017\u0017dj<\u0011QL\u000e\f\u0002@\bx#fv<\u0012w\u001ek#\u0004a.6\u001a\u000bP!i\u000e\u0016Y0I)t\u0015\u0014b&\tR#0\u0017\u001a7\u0012]\u0013^XW'-!\u0006yi_\u0014h`W=fMbW'S+r\u000beq>?2g\u0001l; t8zatit&`\u0000\u001c\u0015w\u0005 \u0013`\u0002^MvJ2i\u0006ra.\b\u0013^B\tfd\\WSI1lrh\u0007_\u0013\u001e\u0006\u0004\u001fd7^S\u0015,\u00025e]&\u0010CHhb!\u0000X\u0006 >\u0001]+C%\u0012+n-)+\\\u000blS \tx2W\u000b\u001b$8\u000fxyr\u0001\u001bv8\n\u001d}\u001dJhR\u0007\u000bz\u0006rcyJ}6d0\u000f\u000f\u001c)-\u00076<f~\u0003\u0007c%\f\u0016\u000f\u0007Scz9*\u0007\\\u0004\u0004\u0017cK:p^\u0017\raLf0000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetZone><Total>S32,0,40|40</Total><Offset>S32,0,40|0</Offset><Ln>S32,0,40|2</Ln><L0><Type>TYP,DE|1</Type><Voice>TYP,CX|1</Voice><Name>GBA,16|496E67726573736F</Name></L0><L1><Type>TYP,SI|2</Type><Voice>TYP,CX|1</Voice><Name>GBA,16|536F6767696F726E6F203346</Name></L1><Err></Err></GetZone></Host></Root>",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetZone": {
+            "Total": {
+              "value": "S32,0,40|40"
+            },
+            "Offset": {
+              "value": "S32,0,40|0"
+            },
+            "Ln": {
+              "value": "S32,0,40|2"
+            },
+            "L0": {
+              "Type": {
+                "value": "TYP,DE|1"
+              },
+              "Voice": {
+                "value": "TYP,CX|1"
+              },
+              "Name": {
+                "value": "GBA,16|496E67726573736F"
+              }
+            },
+            "L1": {
+              "Type": {
+                "value": "TYP,SI|2"
+              },
+              "Voice": {
+                "value": "TYP,CX|1"
+              },
+              "Name": {
+                "value": "GBA,16|536F6767696F726E6F203346"
+              }
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    },
+    "data": {
+      "zones": [
+        {
+          "id": 1,
+          "zone": 1,
+          "name": "Ingresso",
+          "typeId": 1,
+          "type": "Ritardata",
+          "voiceId": 1,
+          "voiceName": "Fisso"
+        },
+        {
+          "id": 2,
+          "zone": 2,
+          "name": "Soggiorno 3F",
+          "typeId": 2,
+          "type": "Perimetrale",
+          "voiceId": 1,
+          "voiceName": "Fisso"
+        }
+      ]
+    }
+  }
+}
