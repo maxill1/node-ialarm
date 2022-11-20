@@ -1,6 +1,6 @@
 {
     "name": "ialarm",
-    "version": "0.6.4",
+    "version": "0.6.5",
     "description": "A node library to control iAlarm/antifurtocasa365, Casasicura/Siqura and other chinese 'TCP IP' alarm system like Meian ST-IVCGT clones and Emooluxr",
     "bin": {
         "meian-cli": "./cli.js",
