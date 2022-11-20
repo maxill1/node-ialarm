@@ -5,16 +5,25 @@ import { MeianCommands } from './meian-commands.js'
 import MeianConstants from './meian-constants.js'
 
 function initListLimits (limit) {
-  const num = parseInt(limit)
+  let num = 0
+  if (Array.isArray(limit)) {
+    num = limit.reduce((max, current) => {
+      return Math.max(max, current)
+    })
+  } else if (!isNaN(limit)) {
+    num = parseInt(limit)
+  }
+
+  // numeric limit
   if (num > 0) {
     return {
       ...MeianConstants.listLimit,
       GetByWay: num, // usually 128
-      GetZone: num, // usually 128
-      default: num // usually 128
+      GetZone: num // usually 128
     }
   }
 
+  // map of limits
   return {
     ...MeianConstants.listLimit,
     ...(limit || {})
@@ -494,6 +503,8 @@ export const MeianSocket = function (host, port, uid, pwd, logLevel, customListL
   }
 
   return {
+    // GetByWay, GetZone, etc, configured list limits (custom or default)
+    listLimit,
     /**
      * connect to the server: 1) connect and 2) login
      */
