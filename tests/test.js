@@ -20,7 +20,7 @@ const zones = args.zones
 const dump = args.dump
 const push = args.push
 
-function testMessages (command) {
+function testMessages (command, isResponse) {
   it(`${command} - should read, convert and parse messages`, () => {
     console.log(`Testing command ${command}`)
     const compare = testdata[command]
@@ -28,7 +28,7 @@ function testMessages (command) {
     expect(compare).toBeDefined()
 
     if (compare) {
-      const encrypted = MeianMessage.createMessage(compare.xml, 1, true)
+      const encrypted = MeianMessage.createMessage(compare.xml, 1, !isResponse)
       expect(encrypted).toBe(compare.encrypted)
 
       // from raw message to xml
@@ -59,6 +59,42 @@ function testMessages (command) {
       })
 
       console.log(`Tested command "${command}" done`)
+    }
+  })
+}
+
+function generateFakeData (command, isResponse, fromXml) {
+  it(`${command} - should parse messages`, () => {
+    console.log(`Testing command ${command}`)
+    const compare = testdata[command]
+
+    expect(compare).toBeDefined()
+
+    if (compare) {
+      const data = {
+        encrypted: '',
+        xml: '',
+        data: {},
+        rawData: {}
+      }
+
+      if (fromXml) {
+        data.xml = compare.xml
+        data.rawData = MeianMessage.toJson(data.xml)
+      } else {
+        // json
+        data.rawData = compare.rawData
+        data.xml = MeianMessage.toXml(
+          {
+            // needed to remove <Err>ERR|00</Err> if present
+            Root: data.rawData.Root
+          }
+        )
+      }
+      data.encrypted = MeianMessage.createMessage(data.xml, 1, !isResponse)
+      data.formatted = ((MeianCommands[command] && MeianCommands[command].formatter) || MeianMessageCleaner.default)(data.rawData)
+
+      console.log(`generated "${JSON.stringify(data)}"`)
     }
   })
 }
@@ -104,12 +140,18 @@ jest.setTimeout(30000)
 describe('Meian client tests', () => {
   describe('Testing MeianMessageCleaner and MeianMessage', () => {
     testMessages('GetArea')
+    testMessages('SetArea', true)
     testMessages('Client')
     testMessages('GetAlarmStatus')
+    testMessages('SetAlarmStatus', true)
     testMessages('GetByWay')
     testMessages('GetLog')
     testMessages('GetZone')
   })
+
+  /* describe('Generate test data for MeianCommand responses', () => {
+    generateFakeData('SetAlarmStatus', true, true)
+  }) */
 
   describe('Testing MeianDataHandler', () => {
     const GetAlarmStatusArmedHome = {

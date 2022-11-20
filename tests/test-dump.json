@@ -3,15 +3,13 @@
     "encrypted": "@ieM0071000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^dY'BpptGy64x\u001ehec|xa\u001d0^|-xqFI%Xc\u001ejk2\u0003QYa0\u0017\u001c!\rL\u00130000",
     "xml": "<Err>ERR|00</Err><Root><Pair><Client><Err></Err></Client></Pair></Root>",
     "data": {
-      "Err": {
-      }
+      "Err": {}
     },
     "rawData": {
       "Root": {
         "Pair": {
           "Client": {
-            "Err": {
-            }
+            "Err": {}
           }
         }
       },
@@ -21,7 +19,130 @@
   "GetArea": {
     "encrypted": "@ieM0291000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u0012(iA}\u0011C~6%\"f\u0011\u001fp=c\u001e\u001e\\t\n8t90\u0003\u000e\u0006\u0017\u0010j^=+\u0016\u0006~Q<\u0014ht8R\u0013\u0010 wM^Xi.\\\bt^\u000e\u001d\u001d\u0004\u0007 xnp\n\u0001[\u0006r.h\u001a\u000bOe6F7S~xNp`\u0017\u001a#\u0015R 0\u0017\u001d:\u0003LX\u00110\u0004a\u0002t\u0006\u0011|>\u0006\u0017k_m.\u0017G\u0006\u001ai\u001e`sbC\u0012\bA\\r\u00118B6%:-1\u0012~>\u001b\u0003\u0014\u001c\f\u0004)\u001c\u00050\u0003\u0016MXaXa\u001eb&q~#\\u$i4\u0001pXnL^K\u00150u.\u0006\u0006\f|}\u0010\nxd5.yM}zNA\u0014\n+\u000beeQmf\u000ems4McU?zrM\u0000\u001d,0}<<\\\u0004\u0002'|JprkHDNJNY\u00150u*[K:\u000erceD'd0000",
     "xml": "<Err>ERR|00</Err><Root><Host><GetArea><Total>S32,4,4|4</Total><Offset>S32,0,0|0</Offset><Ln>S32,0,4|4</Ln><L0><Status>TYP,STAY|2</Status></L0><L1><Status>TYP,DISARM|1</Status></L1><L2><Status>TYP,DISARM|1</Status></L2><L3><Status>TYP,DISARM|1</Status></L3><Err></Err></GetArea></Host></Root>",
-    "data": { "areas": [{ "area": 1, "id": 1, "status": "ARMED_HOME", "value": 2  }, { "area": 2, "id": 2, "value": 1, "status": "DISARMED" }, { "area": 3, "id": 3, "value": 1, "status": "DISARMED" }, { "area": 4, "id": 4, "value": 1, "status": "DISARMED"}]},
-    "rawData": { "Root": { "Host": { "GetArea": { "Total": { "value": "S32,4,4|4" }, "Offset": { "value": "S32,0,0|0" }, "Ln": { "value": "S32,0,4|4" }, "L0": { "Status": { "value": "TYP,STAY|2" } }, "L1": { "Status": { "value": "TYP,DISARM|1" } }, "L2": { "Status": { "value": "TYP,DISARM|1" } }, "L3": { "Status": { "value": "TYP,DISARM|1" } }, "Err": {} } } }, "Err": "ERR|00" }
+    "data": {
+      "areas": [
+        {
+          "area": 1,
+          "id": 1,
+          "status": "ARMED_HOME",
+          "value": 2
+        },
+        {
+          "area": 2,
+          "id": 2,
+          "value": 1,
+          "status": "DISARMED"
+        },
+        {
+          "area": 3,
+          "id": 3,
+          "value": 1,
+          "status": "DISARMED"
+        },
+        {
+          "area": 4,
+          "id": 4,
+          "value": 1,
+          "status": "DISARMED"
+        }
+      ]
+    },
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetArea": {
+            "Total": {
+              "value": "S32,4,4|4"
+            },
+            "Offset": {
+              "value": "S32,0,0|0"
+            },
+            "Ln": {
+              "value": "S32,0,4|4"
+            },
+            "L0": {
+              "Status": {
+                "value": "TYP,STAY|2"
+              }
+            },
+            "L1": {
+              "Status": {
+                "value": "TYP,DISARM|1"
+              }
+            },
+            "L2": {
+              "Status": {
+                "value": "TYP,DISARM|1"
+              }
+            },
+            "L3": {
+              "Status": {
+                "value": "TYP,DISARM|1"
+              }
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    }
+  },
+  "SetArea": {
+    "encrypted": "@ieM0103000100000j!!\u0016\u0006\u0011*aK:pxkHDNJNY\u00150\n\rG\u0006\u001d\u0003|`\u0007\u0007#/h0\u000f\u0013Bd/~\u0017:96Y1/\u0003kz\f\u0013bVy*v^Mk_>xM=p^}_\u00100\u0004w\u001dz\\\u001d\u0010 kNLj~?\u0003\n\u0004\u001fx!]B\u0015,{\bcQ7\u00100103",
+    "xml": "<Root><Host><SetArea><Pos>S32,0,3|2</Pos><Status>TYP,STAY|2</Status><Err></Err></SetArea></Host></Root>",
+    "data": {
+      "area": 2,
+      "status": "ARMED_HOME"
+    },
+    "rawData": {
+      "Root": {
+        "Host": {
+          "SetArea": {
+            "Pos": {
+              "value": "S32,0,3|2"
+            },
+            "Status": {
+              "value": "TYP,STAY|2"
+            },
+            "Err": {}
+          }
+        }
+      }
+    }
+  },
+  "GetAlarmStatus": {
+    "encrypted": "@ieM0120000100000}<<\\}0r\b~rk}_B1\u0004yWDxd^|W=DpppNd\u00126mR.~cp61=f~h'g\u0004FKT5E)t\u000f\u0014N1lj\u0006p\nra&][1zY,-{\u0010\u001fi}J\u0015\u0004\u0004I(\u0010\n\u0004\u001fw+ZwGq&7_J\"Zbb\u0006rM\u0010KDh/k\u001d\u0010O/X)0000",
+    "xml": "<Err>ERR|00</Err><Root><Host><GetAlarmStatus><DevStatus>TYP,STAY|2</DevStatus><Err></Err></GetAlarmStatus></Host></Root>",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "GetAlarmStatus": {
+            "DevStatus": {
+              "value": "TYP,STAY|2"
+            },
+            "Err": {}
+          }
+        }
+      },
+      "Err": "ERR|00"
+    },
+    "data": "ARMED_HOME"
+  },
+  "SetAlarmStatus": {
+    "encrypted": "@ieM0100000100000j!!\u0016\u0006\u0011*aK:pxkHDNTJJF_.\u0003@M=\u000er\bR]C';xU0\u0013CH\u0012h\n\u0011\u0011m\u0010\\+\u0003\u0016\u000f\u0004Sas\"%\u0016\u0017K\u0015cIJ<a\\\u0004\u00021kL\u00194i\\N{Y_MX2fM|WCDp\u0012\u0019y;.20100",
+    "xml": "<Root><Host><SetAlarmStatus><DevStatus>TYP,DISARM|1</DevStatus><Err/></SetAlarmStatus></Host></Root>",
+    "data": "DISARMED",
+    "rawData": {
+      "Root": {
+        "Host": {
+          "SetAlarmStatus": {
+            "DevStatus": {
+              "value": "TYP,DISARM|1"
+            },
+            "Err": {}
+          }
+        }
+      }
+    }
   }
 }

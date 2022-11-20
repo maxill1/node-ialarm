@@ -273,6 +273,9 @@ export const MeianMessageCleaner = {
      * cleanup the response
      */
   cleanData: function (input) {
+    if (!input) {
+      return
+    }
     let value = input
     const type = TYPES.exec(input) && TYPES.exec(input)[0]
     // if (!type) {

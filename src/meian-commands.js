@@ -173,7 +173,17 @@ export const MeianCommands = {
         message: MeianMessage.prepareMessage('/Root/Host/SetArea', cmd)
       }
     },
-    formatter: MeianMessageCleaner.default
+    // {"SetArea":{"Root":{"Host":{"SetArea":{"Pos":{ "value": "S32,0,3|2" },"Status":{"value":"TYP,STAY|2"},"Err":{}}}}}}}
+    formatter: function (response) {
+      return MeianMessageCleaner.parseData(response, (hostData) => {
+        const status = MeianMessageCleaner.cleanData(hostData.Status?.value)
+        const pos = MeianMessageCleaner.cleanData(hostData.Pos?.value)
+        return {
+          area: pos,
+          status: MeianStatusDecoder.fromTcpValueToStatus(status)
+        }
+      })
+    }
   },
 
   /**
