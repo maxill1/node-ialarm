@@ -410,6 +410,25 @@ describe('Meian client tests', () => {
       })([...GetZone.zones])
     }
 
+    // bad status response
+    testMeianDataHandler('getStatus',
+      'GetAlarmStatus bad status response (empty)',
+      '',
+      {
+        status_1: 'UNKNOWN',
+        status_2: 'UNKNOWN',
+        status_3: 'UNKNOWN',
+        status_4: 'UNKNOWN'
+      })
+    testMeianDataHandler('getStatus',
+      'GetAlarmStatus bad status response (object)',
+      { arg: 'bad arg' },
+      {
+        status_1: 'UNKNOWN',
+        status_2: 'UNKNOWN',
+        status_3: 'UNKNOWN',
+        status_4: 'UNKNOWN'
+      })
     // GetAlarmStatus
     testMeianDataHandler('getStatus',
       'GetAlarmStatus disarmed status as string',

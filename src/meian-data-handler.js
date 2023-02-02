@@ -22,45 +22,52 @@ const MeianDataHandler = {
       status_3: 'UNKNOWN',
       status_4: 'UNKNOWN'
     }
-    if (typeof data === 'string' || (data.status && typeof data.status === 'string')) {
-      const singleAreaStatus = data?.status ? data.status : data
-      response.status_1 = singleAreaStatus
-    } else if (data.areas && Array.isArray(data.areas)) {
-      logger.debug(`Your alarm is exposing ${data.areas} areas`)
-      // get area
-      /*
-     {  areas: [
-    {
-      id: 1,
-      area: 1,
-      value: 2,
-      status: "ARMED_HOME",
-    },
-    {
-      id: 2,
-      area: 2,
-      value: 1,
-      status: "DISARMED",
-    },
-    {
-      id: 3,
-      area: 3,
-      value: 1,
-      status: "DISARMED",
-    },
-    {
-      id: 4,
-      area: 4,
-      value: 1,
-      status: "DISARMED",
-    },
-  ]}
-      */
+    if (data) {
+      if (typeof data === 'string' || (data.status && typeof data.status === 'string')) {
+        const singleAreaStatus = data?.status ? data.status : data
+        response.status_1 = singleAreaStatus
+      } else if (data.areas && Array.isArray(data.areas)) {
+        logger.debug(`Your alarm is exposing ${data.areas} areas`)
+        // get area
+        /*
+       {  areas: [
+      {
+        id: 1,
+        area: 1,
+        value: 2,
+        status: "ARMED_HOME",
+      },
+      {
+        id: 2,
+        area: 2,
+        value: 1,
+        status: "DISARMED",
+      },
+      {
+        id: 3,
+        area: 3,
+        value: 1,
+        status: "DISARMED",
+      },
+      {
+        id: 4,
+        area: 4,
+        value: 1,
+        status: "DISARMED",
+      },
+    ]}
+        */
 
-      data.areas.forEach(item => {
-        response[`status_${item.area}`] = item.status
-      })
+        data.areas.forEach(item => {
+          response[`status_${item.area}`] = item.status
+        })
+      } else {
+        logger.error(`GetAlarmStatus and GetArea returned an unhandled response: ${JSON.stringify(data || 'empty')}`)
+      }
+    } else {
+      logger.error('GetAlarmStatus and GetArea returned an empty response')
     }
+
     return response
   },
   /**
